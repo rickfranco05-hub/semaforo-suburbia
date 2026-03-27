@@ -1,0 +1,8 @@
+node_modules/
+*.xlsx
+*.output
+gen_reporte.js
+_build_offline.js
+build_semaforo.js
+logo_b64.txt
+package*.json
