@@ -2344,6 +2344,185 @@ function resetApp() {
 function esc(s) {
   return String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+/* ================================================================
+   CHATBOT
+================================================================ */
+const WORKER_URL = 'https://semaforo-chatbot.rickfranco05.workers.dev';
+let chatMessages = [];
+let chatOpen = false;
+
+function buildChatContext() {
+  const accum = getAccumData(filteredData);
+  const counts = { verde: 0, amarillo: 0, rojo: 0, sin_datos: 0 };
+  accum.forEach(r => { if (counts[r.nivel] !== undefined) counts[r.nivel]++; });
+
+  const totalVta   = accum.reduce((s,r) => s + (r.vta || 0), 0);
+  const totalPlan  = accum.reduce((s,r) => s + (r.vtaPlan || 0), 0);
+  const totalUtil  = accum.reduce((s,r) => s + (r.utilidad || 0), 0);
+  const calRows    = accum.filter(r => r.calif_general > 0);
+  const califProm  = calRows.length ? calRows.reduce((s,r) => s + r.calif_general, 0) / calRows.length : 0;
+
+  const rojas = accum
+    .filter(r => r.nivel === 'rojo')
+    .sort((a,b) => a.des_vs_plan_vta - b.des_vs_plan_vta)
+    .slice(0, 10)
+    .map(r => `${r.seccion} (${r.division}): vta ${r.des_vs_plan_vta?.toFixed(1)}% vs plan, calif ${r.calif_general?.toFixed(1)}`);
+
+  const verdes = accum
+    .filter(r => r.nivel === 'verde')
+    .sort((a,b) => b.calif_general - a.calif_general)
+    .slice(0, 5)
+    .map(r => `${r.seccion} (${r.division}): calif ${r.calif_general?.toFixed(1)}, vta ${r.des_vs_plan_vta?.toFixed(1)}% vs plan`);
+
+  const filtros = [];
+  const selDir = document.getElementById('f-dir')?.value;
+  const selDiv = document.getElementById('f-div')?.value;
+  if (selDir) filtros.push(`Dirección: ${selDir}`);
+  if (selDiv) filtros.push(`División: ${selDiv}`);
+  const mesesActivos = [...document.querySelectorAll('.pill-mes.active')].map(b => b.textContent);
+  if (mesesActivos.length) filtros.push(`Meses: ${mesesActivos.join(', ')}`);
+
+  return JSON.stringify({
+    filtros_activos: filtros.length ? filtros : ['Todos los datos'],
+    total_secciones: accum.length,
+    distribucion_semaforo: counts,
+    resumen_financiero: {
+      ventas_real: totalVta.toFixed(0),
+      ventas_plan: totalPlan.toFixed(0),
+      des_vs_plan_pct: totalPlan ? (((totalVta/totalPlan)-1)*100).toFixed(2)+'%' : 'N/A',
+      utilidad_bruta: totalUtil.toFixed(0),
+      calificacion_promedio: califProm.toFixed(2)
+    },
+    top_secciones_riesgo: rojas,
+    top_secciones_destacadas: verdes
+  }, null, 2);
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-panel').style.display = chatOpen ? 'flex' : 'none';
+  document.getElementById('chat-fab').style.display = chatOpen ? 'none' : 'flex';
+  if (chatOpen && chatMessages.length === 0) {
+    addBotMessage('¡Hola! Soy tu analista de desempeño. Puedo ayudarte a interpretar los datos del dashboard. ¿Qué quieres analizar?');
+  }
+}
+
+function addBotMessage(text) {
+  chatMessages.push({ role: 'assistant', content: text });
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = chatMessages.map(m => `
+    <div class="chat-msg chat-msg-${m.role}">
+      <div class="chat-bubble">${m.content.replace(/\n/g,'<br>')}</div>
+    </div>`).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  chatMessages.push({ role: 'user', content: text });
+  renderChatMessages();
+
+  const typing = document.getElementById('chat-typing');
+  typing.style.display = 'flex';
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: chatMessages.filter(m => m.role !== 'assistant' || chatMessages.indexOf(m) > 0),
+        context: buildChatContext()
+      })
+    });
+    const data = await res.json();
+    typing.style.display = 'none';
+    if (data.reply) addBotMessage(data.reply);
+    else addBotMessage('Error al obtener respuesta. Intenta de nuevo.');
+  } catch(e) {
+    typing.style.display = 'none';
+    addBotMessage('No se pudo conectar con el asistente. Verifica tu conexión.');
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id === 'chat-input') sendChatMessage();
+});
 </script>
+
+<!-- CHATBOT FAB -->
+<button id="chat-fab" onclick="toggleChat()" title="Abrir asistente" style="
+  position:fixed; bottom:2rem; right:2rem; z-index:1000;
+  width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
+  background:var(--accent); color:#fff; font-size:1.5rem;
+  box-shadow:0 4px 16px rgba(229,0,126,0.4);
+  display:flex; align-items:center; justify-content:center;
+  transition:transform 0.2s;">💬</button>
+
+<!-- CHATBOT PANEL -->
+<div id="chat-panel" style="
+  display:none; flex-direction:column;
+  position:fixed; bottom:2rem; right:2rem; z-index:1000;
+  width:360px; height:520px; border-radius:1rem; overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid var(--border);
+  background:var(--surface);">
+
+  <!-- Header -->
+  <div style="background:var(--accent); padding:0.9rem 1.1rem; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:0.6rem; color:#fff;">
+      <span style="font-size:1.2rem">🤖</span>
+      <div>
+        <div style="font-weight:600; font-size:0.9rem">Asistente Suburbia</div>
+        <div style="font-size:0.72rem; opacity:0.85">Análisis de desempeño comercial</div>
+      </div>
+    </div>
+    <button onclick="toggleChat()" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer; opacity:0.8">✕</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="chat-messages" style="flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.6rem;"></div>
+
+  <!-- Typing indicator -->
+  <div id="chat-typing" style="display:none; padding:0 1rem 0.5rem; align-items:center; gap:0.4rem; color:var(--text3); font-size:0.8rem;">
+    <span>Analizando</span>
+    <span style="animation:pulse 1s infinite">...</span>
+  </div>
+
+  <!-- Input -->
+  <div style="padding:0.75rem; border-top:1px solid var(--border); display:flex; gap:0.5rem;">
+    <input id="chat-input" type="text" placeholder="Pregunta sobre los datos..." style="
+      flex:1; padding:0.5rem 0.75rem; border:1px solid var(--border2);
+      border-radius:0.5rem; font-size:0.85rem; background:var(--bg);
+      color:var(--text); outline:none; font-family:inherit;">
+    <button onclick="sendChatMessage()" style="
+      background:var(--accent); color:#fff; border:none; border-radius:0.5rem;
+      padding:0.5rem 0.9rem; cursor:pointer; font-size:0.9rem;">➤</button>
+  </div>
+</div>
+
+<style>
+  .chat-msg { display:flex; }
+  .chat-msg-user { justify-content:flex-end; }
+  .chat-msg-assistant { justify-content:flex-start; }
+  .chat-bubble {
+    max-width:80%; padding:0.6rem 0.85rem; border-radius:0.75rem;
+    font-size:0.83rem; line-height:1.5;
+  }
+  .chat-msg-user .chat-bubble {
+    background:var(--accent); color:#fff; border-bottom-right-radius:0.2rem;
+  }
+  .chat-msg-assistant .chat-bubble {
+    background:var(--surface2); color:var(--text); border-bottom-left-radius:0.2rem;
+    border:1px solid var(--border);
+  }
+</style>
 </body>
 </html>
