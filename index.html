@@ -2536,26 +2536,108 @@ document.addEventListener('keydown', e => {
     border:1px solid var(--border);
   }
 </style>
-<script type="module">
-  import { MeshGradient } from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders/+esm';
-
+<script>
+(function(){
   const canvas = document.getElementById('upload-bg-canvas');
-  if (canvas) {
-    const gradient = new MeshGradient(canvas, {
-      colors: ['#E5007E', '#67308C', '#fdf0f7', '#C0206E', '#9B2488'],
-      speed: 1.0,
-      backgroundColor: '#fdf0f7',
-    });
-    gradient.play();
+  if (!canvas) return;
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
 
-    // Pause when upload screen is hidden to save resources
-    const uploadScreen = document.getElementById('upload-screen');
-    const observer = new MutationObserver(() => {
-      if (uploadScreen.style.display === 'none') gradient.pause?.();
-      else gradient.play?.();
-    });
-    observer.observe(uploadScreen, { attributes: true, attributeFilter: ['style'] });
+  const VS = `
+    attribute vec2 a_pos;
+    varying vec2 vUv;
+    void main(){
+      vUv = a_pos * 0.5 + 0.5;
+      gl_Position = vec4(a_pos, 0.0, 1.0);
+    }`;
+
+  /* MeshGradient algorithm: inverse-distance-squared blending
+     over 9 animated control points — exact same technique as
+     @paper-design/shaders MeshGradient                         */
+  const FS = `
+    precision highp float;
+    uniform float u_t;
+    varying vec2 vUv;
+
+    void main(){
+      vec2 uv = vUv;
+      float t = u_t * 0.22;
+      float a = 0.32;
+
+      // 9 control points, each drifts on its own sinusoidal path
+      vec2 p0=vec2(0.0 +sin(t*0.70      )*a, 0.0 +cos(t*0.53      )*a);
+      vec2 p1=vec2(0.5 +sin(t*0.90+1.20 )*a*0.55, 0.0+cos(t*0.78  )*a*0.45);
+      vec2 p2=vec2(1.0 +cos(t*0.65      )*a, 0.0 +sin(t*0.72      )*a);
+      vec2 p3=vec2(0.0 +sin(t*0.82+2.00 )*a, 0.5 +cos(t*0.61+1.00 )*a*0.55);
+      vec2 p4=vec2(0.5 +sin(t*1.10      )*a*0.45, 0.5+cos(t*0.88  )*a*0.45);
+      vec2 p5=vec2(1.0 +cos(t*0.74+1.50 )*a, 0.5 +sin(t*0.83+2.00 )*a*0.55);
+      vec2 p6=vec2(0.0 +sin(t*0.93+0.50 )*a, 1.0 +cos(t*0.68      )*a);
+      vec2 p7=vec2(0.5 +sin(t*0.62+2.50 )*a*0.55, 1.0+cos(t*1.02+0.30)*a*0.45);
+      vec2 p8=vec2(1.0 +cos(t*0.79+1.00 )*a, 1.0 +sin(t*0.58      )*a);
+
+      // Suburbia palette
+      vec3 c0=vec3(0.898,0.000,0.494); // #E5007E  pink
+      vec3 c1=vec3(0.404,0.188,0.549); // #67308C  purple
+      vec3 c2=vec3(0.992,0.941,0.969); // #fdf0f7  light pink
+      vec3 c3=vec3(0.749,0.125,0.431); // #BF2070  dark pink
+      vec3 c4=vec3(1.000,1.000,1.000); // white
+      vec3 c5=vec3(0.608,0.141,0.533); // #9B2488  mid purple
+      vec3 c6=vec3(0.898,0.000,0.494); // pink
+      vec3 c7=vec3(0.992,0.941,0.969); // light pink
+      vec3 c8=vec3(0.404,0.188,0.549); // purple
+
+      // Inverse-distance-squared weights
+      float e=0.008;
+      float w0=1.0/(dot(uv-p0,uv-p0)+e);
+      float w1=1.0/(dot(uv-p1,uv-p1)+e);
+      float w2=1.0/(dot(uv-p2,uv-p2)+e);
+      float w3=1.0/(dot(uv-p3,uv-p3)+e);
+      float w4=1.0/(dot(uv-p4,uv-p4)+e);
+      float w5=1.0/(dot(uv-p5,uv-p5)+e);
+      float w6=1.0/(dot(uv-p6,uv-p6)+e);
+      float w7=1.0/(dot(uv-p7,uv-p7)+e);
+      float w8=1.0/(dot(uv-p8,uv-p8)+e);
+
+      float wt=w0+w1+w2+w3+w4+w5+w6+w7+w8;
+      vec3 col=(c0*w0+c1*w1+c2*w2+c3*w3+c4*w4+c5*w5+c6*w6+c7*w7+c8*w8)/wt;
+
+      gl_FragColor=vec4(col,1.0);
+    }`;
+
+  function mkShader(type, src){
+    const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s;
   }
+  const prog=gl.createProgram();
+  gl.attachShader(prog,mkShader(gl.VERTEX_SHADER,VS));
+  gl.attachShader(prog,mkShader(gl.FRAGMENT_SHADER,FS));
+  gl.linkProgram(prog); gl.useProgram(prog);
+
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const aPos=gl.getAttribLocation(prog,'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+  const uT=gl.getUniformLocation(prog,'u_t');
+
+  function resize(){
+    canvas.width =canvas.parentElement?.clientWidth  || window.innerWidth;
+    canvas.height=canvas.parentElement?.clientHeight || window.innerHeight;
+    gl.viewport(0,0,canvas.width,canvas.height);
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  const start=performance.now();
+  function draw(){
+    requestAnimationFrame(draw);
+    if(document.getElementById('upload-screen')?.style.display==='none') return;
+    gl.uniform1f(uT,(performance.now()-start)/1000);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  }
+  draw();
+})();
 </script>
 </body>
 </html>
