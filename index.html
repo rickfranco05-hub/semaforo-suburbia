@@ -969,6 +969,7 @@ function parseExcel(wb) {
     if (sec.toUpperCase() === 'SEASONAL')          continue;
     if (sec.toUpperCase() === 'TENIS DEPORTIVOS')  continue;
     if (sec.toUpperCase() === 'LENCERÍA')          continue;
+    if (sec.toUpperCase() === 'MATERNIDAD')        continue;
 
     const mapping = METRIC_MAP[metNom];
     if (!mapping) continue;
