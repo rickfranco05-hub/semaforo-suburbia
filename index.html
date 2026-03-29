@@ -965,11 +965,12 @@ function parseExcel(wb) {
     if (div === '#')     continue;
     if (sec === '#')     continue;
     if (!sec || !metNom) continue;
-    if (sec.toUpperCase() === 'COMPRAS ESPECIALES') continue;
-    if (sec.toUpperCase() === 'SEASONAL')          continue;
-    if (sec.toUpperCase() === 'TENIS DEPORTIVOS')  continue;
-    if (sec.toUpperCase() === 'LENCERÍA')          continue;
-    if (sec.toUpperCase() === 'MATERNIDAD')        continue;
+    const secN = sec.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    if (secN === 'COMPRAS ESPECIALES') continue;
+    if (secN === 'SEASONAL')          continue;
+    if (secN === 'TENIS DEPORTIVOS')  continue;
+    if (secN === 'LENCERIA')          continue;
+    if (secN === 'MATERNIDAD')        continue;
 
     const mapping = METRIC_MAP[metNom];
     if (!mapping) continue;
