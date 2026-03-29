@@ -322,107 +322,6 @@
     .btn-page:disabled { opacity: 0.35; cursor: default; }
     .btn-page.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-    /* ── ANIMATED BUTTON (ui-anim-btn) ── */
-    .ui-anim-btn {
-      --padding: 4px; --uab-r: 24px; --uab-t: 0.4s;
-      --highlight:    hsl(var(--highlight-hue,326deg),100%,70%);
-      --highlight-80: hsla(var(--highlight-hue,326deg),100%,70%,.80);
-      --highlight-50: hsla(var(--highlight-hue,326deg),100%,70%,.50);
-      --highlight-30: hsla(var(--highlight-hue,326deg),100%,70%,.30);
-      --highlight-20: hsla(var(--highlight-hue,326deg),100%,70%,.20);
-      --uab-svg-fill: #e8e8e8;
-      position:relative; display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-      cursor:pointer; user-select:none; border-radius:var(--uab-r);
-      padding:.62rem 1.4rem; font-family:inherit; font-size:.9rem; font-weight:600;
-      box-shadow:
-        inset 0 1px 1px rgba(255,255,255,.20), inset 0 2px 2px rgba(255,255,255,.15),
-        inset 0 4px 4px rgba(255,255,255,.10), inset 0 8px 8px rgba(255,255,255,.05),
-        inset 0 16px 16px rgba(255,255,255,.05),
-        0 -1px 1px rgba(0,0,0,.02), 0 -2px 2px rgba(0,0,0,.03),
-        0 -4px 4px rgba(0,0,0,.05), 0 -8px 8px rgba(0,0,0,.06), 0 -16px 16px rgba(0,0,0,.08);
-      transition: box-shadow var(--uab-t), border-color var(--uab-t), background-color var(--uab-t);
-    }
-    .ui-anim-btn::before {
-      content:""; position:absolute;
-      top:calc(-1*var(--padding)); left:calc(-1*var(--padding));
-      width:calc(100% + var(--padding)*2); height:calc(100% + var(--padding)*2);
-      border-radius:calc(var(--uab-r) + var(--padding));
-      pointer-events:none; z-index:-1;
-      background-image:linear-gradient(0deg,#0004,#000a);
-      transition:box-shadow var(--uab-t);
-      box-shadow: 0 -8px 8px -6px transparent inset, 0 -16px 16px -8px transparent inset,
-        1px 1px 1px rgba(255,255,255,.13), 2px 2px 2px rgba(255,255,255,.07),
-        -1px -1px 1px rgba(0,0,0,.13), -2px -2px 2px rgba(0,0,0,.07);
-    }
-    .ui-anim-btn::after {
-      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-      background-image:linear-gradient(0deg,#fff,var(--highlight),var(--highlight-50) 8%,transparent);
-      opacity:0; transition:opacity var(--uab-t), filter var(--uab-t);
-    }
-    .ui-anim-btn:hover { border-color:hsla(var(--highlight-hue,326deg),100%,80%,.40) !important; }
-    .ui-anim-btn:hover::before {
-      box-shadow: 0 -8px 8px -6px rgba(255,255,255,.67) inset,
-        0 -16px 16px -8px var(--highlight-30) inset,
-        1px 1px 1px rgba(255,255,255,.13), 2px 2px 2px rgba(255,255,255,.07),
-        -1px -1px 1px rgba(0,0,0,.13), -2px -2px 2px rgba(0,0,0,.07);
-    }
-    .ui-anim-btn:hover::after {
-      opacity:1;
-      -webkit-mask-image:linear-gradient(0deg,#fff,transparent);
-      mask-image:linear-gradient(0deg,#fff,transparent);
-    }
-    .ui-anim-btn:hover .ui-anim-btn-svg {
-      fill:#fff;
-      filter:drop-shadow(0 0 3px var(--highlight)) drop-shadow(0 -4px 6px rgba(0,0,0,.6));
-      animation:none;
-    }
-    .ui-anim-btn:active { border-color:hsla(var(--highlight-hue,326deg),100%,80%,.70) !important; }
-    .ui-anim-btn:active::before {
-      box-shadow: 0 -8px 12px -6px rgba(255,255,255,.67) inset,
-        0 -16px 16px -8px var(--highlight-80) inset,
-        1px 1px 1px rgba(255,255,255,.27), 2px 2px 2px rgba(255,255,255,.13),
-        -1px -1px 1px rgba(0,0,0,.13), -2px -2px 2px rgba(0,0,0,.07);
-    }
-    .ui-anim-btn:active::after {
-      opacity:1; filter:brightness(200%);
-      -webkit-mask-image:linear-gradient(0deg,#fff,transparent);
-      mask-image:linear-gradient(0deg,#fff,transparent);
-    }
-    .ui-anim-btn:active .ui-anim-letter { text-shadow:0 0 1px hsla(var(--highlight-hue,326deg),100%,90%,.90); animation:none; }
-    .ui-anim-btn-svg {
-      width:1.1rem; height:1.1rem; flex-shrink:0; fill:var(--uab-svg-fill);
-      filter:drop-shadow(0 0 2px rgba(255,255,255,.6));
-      animation:uab-flicker 2s linear infinite; animation-delay:.5s;
-      transition:fill var(--uab-t), filter var(--uab-t), opacity var(--uab-t);
-    }
-    .ui-anim-letter {
-      display:inline-block; color:rgba(255,255,255,.55);
-      animation:uab-letter 2s ease-in-out infinite;
-      transition:color var(--uab-t), text-shadow var(--uab-t);
-    }
-    @keyframes uab-letter { 50% { text-shadow:0 0 3px rgba(255,255,255,.55); color:#fff; } }
-    @keyframes uab-flicker { 50% { opacity:.30; } }
-    .ui-anim-letter:nth-child(1)  { animation-delay:0.00s; }
-    .ui-anim-letter:nth-child(2)  { animation-delay:0.08s; }
-    .ui-anim-letter:nth-child(3)  { animation-delay:0.16s; }
-    .ui-anim-letter:nth-child(4)  { animation-delay:0.24s; }
-    .ui-anim-letter:nth-child(5)  { animation-delay:0.32s; }
-    .ui-anim-letter:nth-child(6)  { animation-delay:0.40s; }
-    .ui-anim-letter:nth-child(7)  { animation-delay:0.48s; }
-    .ui-anim-letter:nth-child(8)  { animation-delay:0.56s; }
-    .ui-anim-letter:nth-child(9)  { animation-delay:0.64s; }
-    .ui-anim-letter:nth-child(10) { animation-delay:0.72s; }
-    .ui-anim-letter:nth-child(11) { animation-delay:0.80s; }
-    .ui-anim-letter:nth-child(12) { animation-delay:0.88s; }
-    .ui-anim-letter:nth-child(13) { animation-delay:0.96s; }
-    .ui-anim-letter:nth-child(14) { animation-delay:1.04s; }
-    .ui-anim-letter:nth-child(15) { animation-delay:1.12s; }
-    .ui-anim-letter:nth-child(16) { animation-delay:1.20s; }
-    .ui-anim-letter:nth-child(17) { animation-delay:1.28s; }
-    .ui-anim-letter:nth-child(18) { animation-delay:1.36s; }
-    .ui-anim-letter:nth-child(19) { animation-delay:1.44s; }
-    .ui-anim-letter:nth-child(20) { animation-delay:1.52s; }
-
     /* ── THEAD GROUP HEADERS ── */
     .thead-group th {
       padding: 0.4rem 1rem; font-size: 0.7rem; font-weight: 800;
@@ -479,9 +378,8 @@
       <div class="drop-emoji">&#128193;</div>
       <div class="drop-main">Arrastra tu archivo Excel aquí</div>
       <div class="drop-hint">Formatos soportados: .xlsx · .xls</div>
-      <button class="ui-anim-btn" onclick="event.stopPropagation(); document.getElementById('file-input').click()" style="background:#2D0A1A;color:#fff;border:1px solid rgba(229,0,126,0.28);--highlight-hue:326deg;">
-        <svg class="ui-anim-btn-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
-        <span class="ui-anim-txt-1">Seleccionar archivo</span>
+      <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+        &#128194; Seleccionar archivo
       </button>
       <input type="file" id="file-input" accept=".xlsx,.xls">
     </div>
@@ -507,14 +405,8 @@
       <button class="btn-nav" id="btn-p3" onclick="showPage('p3')">💡 Insights</button>
     </div>
     <div class="header-actions">
-      <button class="ui-anim-btn" onclick="exportCSV()" style="background:#2D0A1A;color:#fff;border:1px solid rgba(229,0,126,0.28);--highlight-hue:280deg;padding:.42rem 1rem;font-size:.82rem;border-radius:20px;">
-        <svg class="ui-anim-btn-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" style="width:.9rem;height:.9rem;"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
-        <span class="ui-anim-txt-1">Exportar CSV</span>
-      </button>
-      <button class="ui-anim-btn" onclick="resetApp()" style="background:#2D0A1A;color:#fff;border:1px solid rgba(229,0,126,0.28);--highlight-hue:326deg;padding:.42rem 1rem;font-size:.82rem;border-radius:20px;">
-        <svg class="ui-anim-btn-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" style="width:.9rem;height:.9rem;"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
-        <span class="ui-anim-txt-1">Otro archivo</span>
-      </button>
+      <button class="btn-sec" onclick="exportCSV()">&#11015; Exportar CSV</button>
+      <button class="btn-sec" onclick="resetApp()">&#8635; Otro archivo</button>
     </div>
   </div>
 
@@ -2578,20 +2470,6 @@ async function sendChatMessage() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.id === 'chat-input') sendChatMessage();
 });
-
-// Split .ui-anim-txt-1 text into individual letter spans for animation
-(function(){
-  document.querySelectorAll('.ui-anim-txt-1').forEach(el => {
-    const text = el.textContent;
-    el.innerHTML = '';
-    for (const ch of text) {
-      const s = document.createElement('span');
-      s.className = 'ui-anim-letter';
-      s.textContent = ch;
-      el.appendChild(s);
-    }
-  });
-})();
 </script>
 
 <!-- CHATBOT FAB -->
