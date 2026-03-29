@@ -2586,17 +2586,17 @@ document.addEventListener('keydown', e => {
       vec3 c7=vec3(0.992,0.941,0.969); // light pink
       vec3 c8=vec3(0.404,0.188,0.549); // purple
 
-      // Inverse-distance-squared weights
-      float e=0.008;
-      float w0=1.0/(dot(uv-p0,uv-p0)+e);
-      float w1=1.0/(dot(uv-p1,uv-p1)+e);
-      float w2=1.0/(dot(uv-p2,uv-p2)+e);
-      float w3=1.0/(dot(uv-p3,uv-p3)+e);
-      float w4=1.0/(dot(uv-p4,uv-p4)+e);
-      float w5=1.0/(dot(uv-p5,uv-p5)+e);
-      float w6=1.0/(dot(uv-p6,uv-p6)+e);
-      float w7=1.0/(dot(uv-p7,uv-p7)+e);
-      float w8=1.0/(dot(uv-p8,uv-p8)+e);
+      // Inverse-distance weights raised to power 4 → sharper regions
+      float e=0.001;
+      float w0=pow(1.0/(dot(uv-p0,uv-p0)+e),2.5);
+      float w1=pow(1.0/(dot(uv-p1,uv-p1)+e),2.5);
+      float w2=pow(1.0/(dot(uv-p2,uv-p2)+e),2.5);
+      float w3=pow(1.0/(dot(uv-p3,uv-p3)+e),2.5);
+      float w4=pow(1.0/(dot(uv-p4,uv-p4)+e),2.5);
+      float w5=pow(1.0/(dot(uv-p5,uv-p5)+e),2.5);
+      float w6=pow(1.0/(dot(uv-p6,uv-p6)+e),2.5);
+      float w7=pow(1.0/(dot(uv-p7,uv-p7)+e),2.5);
+      float w8=pow(1.0/(dot(uv-p8,uv-p8)+e),2.5);
 
       float wt=w0+w1+w2+w3+w4+w5+w6+w7+w8;
       vec3 col=(c0*w0+c1*w1+c2*w2+c3*w3+c4*w4+c5*w5+c6*w6+c7*w7+c8*w8)/wt;
