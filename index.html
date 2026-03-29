@@ -2575,16 +2575,16 @@ document.addEventListener('keydown', e => {
       vec2 p7=vec2(0.5 +sin(t*0.62+2.50 )*a*0.55, 1.0+cos(t*1.02+0.30)*a*0.45);
       vec2 p8=vec2(1.0 +cos(t*0.79+1.00 )*a, 1.0 +sin(t*0.58      )*a);
 
-      // Suburbia palette — exact colors from demo.tsx original
-      vec3 c0=vec3(0.898,0.000,0.494); // #E5007E  hot pink
-      vec3 c1=vec3(0.404,0.188,0.549); // #67308C  purple
-      vec3 c2=vec3(0.851,0.212,0.565); // #D93690  medium pink
-      vec3 c3=vec3(0.749,0.125,0.439); // #BF2070  dark pink
-      vec3 c4=vec3(0.992,0.941,0.969); // #fdf0f7  light pink
-      vec3 c5=vec3(0.608,0.141,0.533); // #9B2488  mid purple
-      vec3 c6=vec3(0.655,0.561,0.749); // #A78FBF  light purple
-      vec3 c7=vec3(0.898,0.000,0.494); // #E5007E  hot pink
-      vec3 c8=vec3(0.851,0.212,0.565); // #D93690  medium pink
+      // Suburbia palette — pastel (original colors mezclados 50% con blanco)
+      vec3 c0=vec3(0.949,0.502,0.749); // #E5007E → pastel rosa
+      vec3 c1=vec3(0.702,0.596,0.776); // #67308C → pastel lavanda
+      vec3 c2=vec3(0.925,0.608,0.784); // #D93690 → pastel rosa medio
+      vec3 c3=vec3(0.875,0.565,0.722); // #BF2070 → pastel rosa oscuro
+      vec3 c4=vec3(0.992,0.941,0.969); // #fdf0f7  rosa muy claro (base)
+      vec3 c5=vec3(0.804,0.573,0.769); // #9B2488 → pastel morado medio
+      vec3 c6=vec3(0.827,0.780,0.875); // #A78FBF → pastel lavanda claro
+      vec3 c7=vec3(0.949,0.502,0.749); // #E5007E → pastel rosa
+      vec3 c8=vec3(0.925,0.608,0.784); // #D93690 → pastel rosa medio
 
       // Softmax weights (exp) — sharp defined regions, smooth organic transitions
       float T=25.0;
