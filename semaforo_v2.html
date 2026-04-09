@@ -285,8 +285,10 @@
       font-weight: 600; color: #ffffff; font-size: 0.72rem; text-transform: uppercase;
       letter-spacing: 0.04em; cursor: pointer; user-select: none; white-space: nowrap;
       border-bottom: 1px solid rgba(255,255,255,0.15); transition: background 0.15s, color 0.15s;
+      position: sticky; z-index: 50;
     }
     thead th:hover { background: var(--purple-med); color: #ffffff; }
+    .row-grand-sticky { position: sticky; z-index: 49; }
     .sort-num { font-size: 0.6rem; color: var(--accent2); margin-left: 0.15rem; vertical-align: super; }
     .sort-arrow { display: inline-block; margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
     th.sort-asc  .sort-arrow { opacity: 1; }
@@ -1883,6 +1885,9 @@ function renderTable() {
   });
 
   const allRows = buildTableRows(getSorted());
+  // Mover Gran Total al inicio (debajo de los headers)
+  const grandIdx = allRows.findIndex(r => r._isTotal === 'grand');
+  if (grandIdx > 0) { const [gt] = allRows.splice(grandIdx, 1); allRows.unshift(gt); }
   const total   = allRows.filter(r => !r._isTotal).length;
 
   document.getElementById('tbl-meta').textContent = `${total.toLocaleString('es-MX')} secciones`;
@@ -1898,6 +1903,7 @@ function renderTable() {
     /* ── TOTAL ROWS ── */
     if (r._isTotal) {
       const bg    = r._isTotal === 'grand' ? '#D93690' : r._isTotal === 'dir' ? '#67308C' : '#6C3B8C';
+      const stickyClass = r._isTotal === 'grand' ? ' row-grand-sticky' : '';
       const label = r._isTotal === 'grand'
         ? '✦ GRAN TOTAL'
         : r._isTotal === 'dir'
@@ -1905,7 +1911,7 @@ function renderTable() {
           : `▸ Total  ${esc(r._totalDivision  || '')}`;
       const desAaMg = r.des_vs_aa_mg != null && isFinite(r.des_vs_aa_mg)
         ? (r.des_vs_aa_mg * 100).toFixed(2) + ' pp' : '—';
-      return `<tr class="row-total" style="background:${bg};color:#fff">
+      return `<tr class="row-total${stickyClass}" style="background:${bg};color:#fff">
         <td colspan="3" style="font-weight:800;font-size:0.78rem;letter-spacing:0.05em">${label}</td>
         <td class="mono"><strong>${fmtMXN(r.vta)}</strong></td>
         <td class="mono">${fmtMXN(r.vtaPlan)}</td>
@@ -1968,7 +1974,22 @@ function renderTable() {
       <td>${nivelBadge(r.nivel, r.calif_general)}</td>
     </tr>`;
   }).join('');
+  requestAnimationFrame(updateStickyOffsets);
 }
+
+function updateStickyOffsets() {
+  const hdr = document.querySelector('.dash-header');
+  const tbl = document.getElementById('main-table');
+  if (!hdr || !tbl) return;
+  let top = hdr.offsetHeight;
+  tbl.querySelectorAll('thead tr').forEach(tr => {
+    tr.querySelectorAll('th').forEach(th => { th.style.top = top + 'px'; });
+    top += tr.offsetHeight;
+  });
+  const grand = tbl.querySelector('#tbl-body .row-grand-sticky');
+  if (grand) grand.style.top = top + 'px';
+}
+window.addEventListener('resize', updateStickyOffsets);
 
 function renderPagination(total, page, totalPages) {
   const from = total ? (page-1)*PAGE_SIZE+1 : 0;
