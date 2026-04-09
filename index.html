@@ -147,6 +147,15 @@
       font-family: inherit; font-size: 0.8rem; cursor: pointer; transition: color 0.15s, border-color 0.15s;
     }
     .btn-clear:hover { color: var(--text); border-color: var(--text3); }
+    .btn-mode {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
+      padding: 0.4rem 0.75rem; border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-mode:hover { background: var(--accent); color: #fff; }
+    .btn-mode.active { background: var(--accent); color: #fff; }
 
     /* ── MONTH SLICER ── */
     .month-slicer { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; max-width: 340px; }
@@ -431,6 +440,10 @@
         <input class="filter-inp" id="f-sec" placeholder="Buscar sección..." oninput="onFilter()">
       </div>
       <button class="btn-clear" onclick="clearFilters()">&#10005; Limpiar</button>
+      <button class="btn-mode" id="btn-util-mode" onclick="toggleUtilPlanMode()"
+        title="Fuente: Utilidad Bruta Plan Piedra $ — Clic para cambiar a Acum">
+        📊 Util Plan: Mensual
+      </button>
 
       <div class="weights-divider"></div>
 
@@ -719,7 +732,8 @@ const METRIC_MAP = {
   'Ventas Acum Plan Piedra $':         { sum: 'vta_acum_plan'    },
   'Ventas Año Ant $':                  { sum: 'ventas_ano_ant'   },
   'Utilidad Bruta Actual $':           { sum: 'utilidad'         },
-  'Utilidad Bruta Plan Piedra $':      { sum: 'utilidad_plan'    },
+  'Utilidad Bruta Acum Plan Piedra $': { sum: 'utilidad_plan_acum'    },
+  'Utilidad Bruta Plan Piedra $':      { sum: 'utilidad_plan_mensual' },
   'Utilidad Bruta Año Ant $':          { sum: 'utilidad_ano_ant' },
   'Inventario Inicial $':              { sum: 'inv_ini'          },
   'Inventario Inicial Plan Piedra $':  { sum: 'inv_ini_plan', avg: 'avg_inv_plan' },
@@ -753,6 +767,7 @@ const COL_MAP = [
 let allData      = [];
 let filteredData = [];
 let tooltipIndex = {};
+let utilPlanMode = 'mensual'; // 'acum' | 'mensual'
 let currentPage  = 1;
 const PAGE_SIZE  = 25;
 const DEFAULT_SORT = [{col:'direccion',dir:'asc'},{col:'div_cod',dir:'asc'},{col:'sec_cod',dir:'asc'}];
@@ -1099,6 +1114,8 @@ function handleFile(file) {
       const parsed = parseExcel(wb);
       if (parsed.length === 0) { showUploadError('No se encontraron datos válidos en "01_Consulta Secciones". Verifica el archivo.'); return; }
       allData = parsed;
+      applyUtilPlanMode();
+      updateUtilModeBtn();
       initDashboard();
     } catch(err) {
       showUploadError('Error al procesar: ' + err.message);
@@ -1121,6 +1138,42 @@ document.getElementById('file-input').addEventListener('change', (e) => handleFi
 /* ================================================================
    INIT DASHBOARD
 ================================================================ */
+/* ================================================================
+   UTIL PLAN MODE TOGGLE
+================================================================ */
+function applyUtilPlanMode() {
+  for (const r of allData) {
+    r.utilidad_plan  = utilPlanMode === 'acum'
+      ? (r.utilidad_plan_acum    ?? 0)
+      : (r.utilidad_plan_mensual ?? 0);
+    r.mg_plan        = (r.utilidad_plan != null && r.vtaPlan !== 0) ? r.utilidad_plan / r.vtaPlan : null;
+    r.des_vs_plan_mg = (r.mg_real != null && r.mg_plan != null) ? r.mg_real - r.mg_plan : null;
+    const sc = computeScoring(r.vta, r.vtaPlan, r.mg_real, r.mg_plan, r.rot_actual, r.rot_plan);
+    Object.assign(r, sc);
+  }
+}
+
+function updateUtilModeBtn() {
+  const btn = document.getElementById('btn-util-mode');
+  if (!btn) return;
+  const isAcum = utilPlanMode === 'acum';
+  btn.textContent = isAcum ? '📊 Util Plan: Acum' : '📊 Util Plan: Mensual';
+  btn.title = isAcum
+    ? 'Fuente: Utilidad Bruta Acum Plan Piedra $ — Clic para cambiar a Mensual'
+    : 'Fuente: Utilidad Bruta Plan Piedra $ — Clic para cambiar a Acum';
+  btn.classList.toggle('active', isAcum);
+}
+
+function toggleUtilPlanMode() {
+  utilPlanMode = utilPlanMode === 'acum' ? 'mensual' : 'acum';
+  updateUtilModeBtn();
+  applyUtilPlanMode();
+  // Rebuild tooltipIndex so hover tooltip reflects new mode
+  tooltipIndex = {};
+  for (const r of allData) tooltipIndex[`${r.mes}||${r.direccion}||${r.division}||${r.seccion}`] = r;
+  onFilter();
+}
+
 function initDashboard() {
   const meses = [...new Set(allData.map(r => r.mes))].sort((a,b) => MES_ORDER.indexOf(a) - MES_ORDER.indexOf(b));
   document.getElementById('period-badge').textContent = meses.join(' · ');
