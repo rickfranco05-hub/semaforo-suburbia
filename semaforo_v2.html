@@ -288,7 +288,7 @@
       position: sticky; z-index: 50;
     }
     thead th:hover { background: var(--purple-med); color: #ffffff; }
-    .row-grand-sticky { position: sticky; z-index: 49; }
+    tr.row-grand-sticky td { position: sticky; z-index: 49; background: #D93690; color: #fff; }
     .sort-num { font-size: 0.6rem; color: var(--accent2); margin-left: 0.15rem; vertical-align: super; }
     .sort-arrow { display: inline-block; margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
     th.sort-asc  .sort-arrow { opacity: 1; }
@@ -1982,12 +1982,18 @@ function updateStickyOffsets() {
   const tbl = document.getElementById('main-table');
   if (!hdr || !tbl) return;
   let top = hdr.offsetHeight;
+  let zi  = 52;
+  // Sticky thead — cada fila con su propio top y z-index decreciente
   tbl.querySelectorAll('thead tr').forEach(tr => {
-    tr.querySelectorAll('th').forEach(th => { th.style.top = top + 'px'; });
+    tr.querySelectorAll('th').forEach(th => { th.style.top = top + 'px'; th.style.zIndex = zi; });
     top += tr.offsetHeight;
+    zi--;
   });
-  const grand = tbl.querySelector('#tbl-body .row-grand-sticky');
-  if (grand) grand.style.top = top + 'px';
+  // Sticky gran total — aplicar a cada <td>, no al <tr> (los navegadores no soportan sticky en tr)
+  tbl.querySelectorAll('#tbl-body tr.row-grand-sticky td').forEach(td => {
+    td.style.top = top + 'px';
+    td.style.zIndex = 49;
+  });
 }
 window.addEventListener('resize', updateStickyOffsets);
 
