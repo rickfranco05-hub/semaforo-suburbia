@@ -436,17 +436,17 @@
 
       <div class="filter-group">
         <span class="filter-label">Peso Vta</span>
-        <input class="filter-inp weight-inp" id="w-vta" type="number" value="45" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
+        <input class="filter-inp weight-inp" id="w-vta" type="number" value="40" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
       </div>
       <div class="filter-group">
         <span class="filter-label">Peso Mg</span>
-        <input class="filter-inp weight-inp" id="w-mg" type="number" value="35" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
+        <input class="filter-inp weight-inp" id="w-mg" type="number" value="30" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
       </div>
       <div class="filter-group">
         <span class="filter-label">Peso Rot</span>
-        <input class="filter-inp weight-inp" id="w-rot" type="number" value="20" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
+        <input class="filter-inp weight-inp" id="w-rot" type="number" value="25" readonly tabindex="-1" style="pointer-events:none;opacity:0.7;cursor:default;background:var(--surface2)">
       </div>
-      <div class="weight-total ok" id="weight-total" title="Pesos de calificación fijos: Ventas 45% · Margen 35% · Rotación 20%">Total: 100</div>
+      <div class="weight-total ok" id="weight-total" title="Pesos de calificación fijos: Ventas 40% · Margen 30% · Rotación 25%">Total: 100</div>
     </div>
 
     <!-- PAGE 1: Dashboard -->
@@ -1354,9 +1354,10 @@ function renderScorecards() {
   setBadge('sc-mg-b', desMg != null ? `vs Plan: ${fmtPP(desMg)}` : '—', desMg);
 
   // Rotación
-  const rotRows  = d.filter(r => r.rot_actual != null);
-  const rotAvg   = rotRows.length ? rotRows.reduce((s,r) => s + r.rot_actual, 0) / rotRows.length : null;
-  const rotPlanA = rotRows.length ? rotRows.reduce((s,r) => s + (r.rot_plan || 0), 0) / rotRows.length : null;
+  const rotRows     = d.filter(r => r.rot_actual != null);
+  const rotPlanRows = d.filter(r => r.rot_actual != null && r.rot_plan != null);
+  const rotAvg   = rotRows.length     ? rotRows.reduce((s,r) => s + r.rot_actual, 0) / rotRows.length         : null;
+  const rotPlanA = rotPlanRows.length ? rotPlanRows.reduce((s,r) => s + r.rot_plan, 0) / rotPlanRows.length   : null;
   const desRot   = (rotAvg != null && rotPlanA != null) ? rotAvg - rotPlanA : null;
   document.getElementById('sc-rot').textContent = rotAvg != null ? rotAvg.toFixed(4) : '—';
   setBadge('sc-rot-b', desRot != null ? `vs Plan: ${fmtDeltaRot(desRot)}` : '—', desRot);
