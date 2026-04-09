@@ -824,6 +824,9 @@ function showPage(id) {
   document.getElementById('btn-p2').classList.toggle('active', id==='p2');
   document.getElementById('btn-p3').classList.toggle('active', id==='p3');
   if (id === 'p3') renderInsights();
+  // Recalc freeze-pane offsets: #page-p2 is display:none on initial render,
+  // so getBoundingClientRect() returns 0 and the sticky tops never get set.
+  if (id === 'p2') requestAnimationFrame(updateStickyOffsets);
 }
 
 /* ================================================================
@@ -2009,6 +2012,9 @@ function updateStickyOffsets() {
 
   const h1 = groupRow.getBoundingClientRect().height;
   const h2 = colsRow.getBoundingClientRect().height;
+  // Bail out if the table isn't laid out yet (e.g. page-p2 is display:none).
+  // Leaving old `top` values in place is safer than clobbering them with 0.
+  if (h1 === 0 || h2 === 0) return;
 
   // Row 2 of thead sits directly below row 1
   colsRow.querySelectorAll('th').forEach(th => { th.style.top = h1 + 'px'; });
