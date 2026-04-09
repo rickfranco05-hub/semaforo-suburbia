@@ -1304,12 +1304,16 @@ function getAccumData(data) {
     acc.des_vs_plan_mg = (acc.mg_real != null && acc.mg_plan    != null) ? acc.mg_real - acc.mg_plan    : null;
     acc.des_vs_aa_mg   = (acc.mg_real != null && acc.mg_ano_ant != null) ? acc.mg_real - acc.mg_ano_ant : null;
 
-    // Rotación: Ventas Acum YTD (snapshot último mes) / Inventario Actual del mes más reciente
+    // Rotación — alineado con el Excel (hoja Secciones):
+    //   Rot Actual  = Ventas Acum YTD (snapshot último mes) / Inventario Actual snapshot (col AN)
+    //   Rot Plan    = Ventas Acum Plan YTD (snapshot)       / Promedio Inv Plan (AVERAGEIF meses → col BV)
+    //   Rot Año Ant = Ventas Año Ant YTD (suma del periodo) / Promedio Inv AA   (AVERAGEIF meses → col BV)
+    // El Excel usa snapshot SOLO para Rot Actual (col AN); Plan y AA usan AVERAGEIF (col BV).
     const vtaRotBase     = ag._vta_acum_latest      ?? vta;
     const vtaRotPlanBase = ag._vta_acum_plan_latest ?? vtaPlan;
-    acc.rot_actual  = (vtaRotBase     && ag._ai_latest) ? vtaRotBase     / ag._ai_latest : null;
-    acc.rot_plan    = (vtaRotPlanBase && ag._ap_latest) ? vtaRotPlanBase / ag._ap_latest : null;
-    acc.rot_ano_ant = (vtaAA          && ag._aa_latest) ? vtaAA          / ag._aa_latest : null;
+    acc.rot_actual  = (vtaRotBase     && ag._ai_latest)    ? vtaRotBase     / ag._ai_latest    : null;
+    acc.rot_plan    = (vtaRotPlanBase && acc.avg_inv_plan)  ? vtaRotPlanBase / acc.avg_inv_plan  : null;
+    acc.rot_ano_ant = (vtaAA          && acc.avg_inv_aa)    ? vtaAA          / acc.avg_inv_aa    : null;
 
     acc.des_vs_plan_rot = (acc.rot_actual != null && acc.rot_plan    != null) ? acc.rot_actual - acc.rot_plan    : null;
     acc.des_vs_aa_rot   = (acc.rot_actual != null && acc.rot_ano_ant != null) ? acc.rot_actual - acc.rot_ano_ant : null;
