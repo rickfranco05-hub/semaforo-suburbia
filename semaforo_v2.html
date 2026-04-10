@@ -788,7 +788,7 @@ const COL_MAP = [
 let allData      = [];
 let filteredData = [];
 let tooltipIndex = {};
-let utilPlanMode = 'mensual'; // 'acum' | 'mensual'
+let utilPlanMode = 'acum'; // 'acum' (primary — matches Excel CL delta) | 'mensual' (fallback)
 let currentPage  = 1;
 const PAGE_SIZE  = 25;
 const DEFAULT_SORT = [{col:'direccion',dir:'asc'},{col:'div_cod',dir:'asc'},{col:'sec_cod',dir:'asc'}];
@@ -1168,10 +1168,33 @@ document.getElementById('file-input').addEventListener('change', (e) => handleFi
    UTIL PLAN MODE TOGGLE
 ================================================================ */
 function applyUtilPlanMode() {
+  if (utilPlanMode === 'mensual') {
+    // Fallback: monthly values used directly
+    for (const r of allData) r.utilidad_plan = r.utilidad_plan_mensual ?? 0;
+  } else {
+    // Primary: Acum values are YTD cumulative from SAP.
+    // Convert to monthly via delta (same logic as Excel's CL column):
+    //   ENE_monthly = ENE_acum
+    //   FEB_monthly = FEB_acum − ENE_acum
+    //   MAR_monthly = MAR_acum − FEB_acum  …etc.
+    const groups = new Map();
+    for (const r of allData) {
+      const key = `${r.direccion}||${r.division}||${r.seccion}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    }
+    for (const rows of groups.values()) {
+      rows.sort((a, b) => MES_ORDER.indexOf(a.mes) - MES_ORDER.indexOf(b.mes));
+      let prevAcum = 0;
+      for (const r of rows) {
+        const curAcum = r.utilidad_plan_acum ?? 0;
+        r.utilidad_plan = curAcum - prevAcum;
+        prevAcum = curAcum;
+      }
+    }
+  }
+  // Recalculate downstream: mg_plan → des_vs_plan_mg → scoring → semáforo
   for (const r of allData) {
-    r.utilidad_plan  = utilPlanMode === 'acum'
-      ? (r.utilidad_plan_acum    ?? 0)
-      : (r.utilidad_plan_mensual ?? 0);
     r.mg_plan        = (r.utilidad_plan != null && r.vtaPlan !== 0) ? r.utilidad_plan / r.vtaPlan : null;
     r.des_vs_plan_mg = (r.mg_real != null && r.mg_plan != null) ? r.mg_real - r.mg_plan : null;
     const sc = computeScoring(r.vta, r.vtaPlan, r.mg_real, r.mg_plan, r.rot_actual, r.rot_plan);
