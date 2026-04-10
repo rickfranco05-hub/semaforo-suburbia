@@ -97,6 +97,21 @@
     .dash-title { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
     .period-badge { font-size: 0.75rem; color: var(--text2); background: var(--surface2); padding: 0.2rem 0.7rem; border-radius: 999px; border: 1px solid var(--border); font-weight: 400; }
     .header-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    /* ── SETTINGS GEAR ── */
+    .settings-wrap { position: relative; }
+    .btn-settings { font-size: 1.1rem !important; padding: 0.35rem 0.6rem !important; }
+    .settings-menu {
+      display: none; position: absolute; top: 100%; right: 0; margin-top: 0.4rem;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15); min-width: 220px; z-index: 200; padding: 0.3rem;
+    }
+    .settings-menu.open { display: block; }
+    .settings-item {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--text);
+      cursor: pointer; border-radius: var(--radius-sm); transition: background 0.12s;
+    }
+    .settings-item:hover { background: var(--surface2); }
     .btn-sec {
       display: inline-flex; align-items: center; gap: 0.4rem;
       background: transparent; color: var(--text2); border: 1px solid var(--border2);
@@ -433,6 +448,13 @@
       <button class="btn-nav active" id="btn-p1" onclick="showPage('p1')">📊 Dashboard</button>
       <button class="btn-nav" id="btn-p2" onclick="showPage('p2')">📋 Detalle</button>
       <button class="btn-nav" id="btn-p3" onclick="showPage('p3')">💡 Insights</button>
+      <div class="settings-wrap">
+        <button class="btn-nav btn-settings" onclick="toggleSettingsMenu()" title="Ajustes">⚙</button>
+        <div class="settings-menu" id="settings-menu">
+          <button class="settings-item" id="btn-util-mode" onclick="toggleUtilPlanMode()"
+            title="Fuente de Utilidad Plan">📊 Util Plan: Acum</button>
+        </div>
+      </div>
     </div>
     <div class="header-actions">
       <button class="btn-sec" onclick="exportCSV()">&#11015; Exportar CSV</button>
@@ -461,10 +483,6 @@
         <input class="filter-inp" id="f-sec" placeholder="Buscar sección..." oninput="onFilter()">
       </div>
       <button class="btn-clear" onclick="clearFilters()">&#10005; Limpiar</button>
-      <button class="btn-mode" id="btn-util-mode" onclick="toggleUtilPlanMode()"
-        title="Fuente: Utilidad Bruta Plan Piedra $ — Clic para cambiar a Acum">
-        📊 Util Plan: Mensual
-      </button>
 
       <div class="weights-divider"></div>
 
@@ -751,6 +769,7 @@ const METRIC_MAP = {
   'Ventas Plan Piedra $':              { sum: 'ventas_plan'      },
   'Ventas Acum Actual $':              { sum: 'vta_acum_actual'  },
   'Ventas Acum Plan Piedra $':         { sum: 'vta_acum_plan'    },
+  'Ventas Acum Año Ant $':              { sum: 'vta_acum_ano_ant' },
   'Ventas Año Ant $':                  { sum: 'ventas_ano_ant'   },
   'Utilidad Bruta Actual $':           { sum: 'utilidad'         },
   'Utilidad Bruta Acum Plan Piedra $': { sum: 'utilidad_plan_acum'    },
@@ -802,6 +821,18 @@ let califVisible = false;
 const _califStyle = document.createElement('style');
 document.head.appendChild(_califStyle);
 _califStyle.textContent = '.td-calif { display: none !important; }';
+
+function toggleSettingsMenu() {
+  const menu = document.getElementById('settings-menu');
+  menu.classList.toggle('open');
+}
+// Close settings menu when clicking outside
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.settings-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('settings-menu')?.classList.remove('open');
+  }
+});
 
 function toggleCalif() {
   califVisible = !califVisible;
@@ -1077,12 +1108,13 @@ function parseExcel(wb) {
     r.des_vs_aa_mg   = (r.mg_real != null && r.mg_ano_ant != null) ? r.mg_real - r.mg_ano_ant : null;
 
     // ── Rotaciones ──
-    // Numerador: Ventas Acum Actual $ (YTD) — mismo criterio que Excel col W (BU = acumulado)
-    const vtaRotBase     = r.vta_acum_actual ?? r.ventas_actual;
-    const vtaRotPlanBase = r.vta_acum_plan   ?? r.ventas_plan;
+    // Numerador: Ventas Acum YTD (snapshot) — alineado con Excel cols W/Z/AD que leen de $BU
+    const vtaRotBase     = r.vta_acum_actual   ?? r.ventas_actual;
+    const vtaRotPlanBase = r.vta_acum_plan     ?? r.ventas_plan;
+    const vtaRotAABase   = r.vta_acum_ano_ant  ?? r.ventas_ano_ant;
     r.rot_actual  = (vtaRotBase     && r.avg_inv_actual) ? vtaRotBase     / r.avg_inv_actual : null;
     r.rot_plan    = (vtaRotPlanBase && r.avg_inv_plan)   ? vtaRotPlanBase / r.avg_inv_plan   : null;
-    r.rot_ano_ant = (r.ventas_ano_ant && r.avg_inv_aa)   ? r.ventas_ano_ant / r.avg_inv_aa   : null;
+    r.rot_ano_ant = (vtaRotAABase   && r.avg_inv_aa)     ? vtaRotAABase   / r.avg_inv_aa     : null;
 
     // Des vs Plan Rot = Rot Actual - Rot Plan
     r.des_vs_plan_rot = (r.rot_actual != null && r.rot_plan    != null) ? r.rot_actual - r.rot_plan    : null;
@@ -1331,7 +1363,7 @@ function getAccumData(data) {
         _aa_s: 0, _aa_n: 0,   // avg_inv_aa     (Inv Ini Año Ant $)
         // Snapshot del mes más reciente → inventario actual y tooltips
         _mes_last: null, _inv_ini_last: null, _inv_ini_plan_last: null,
-        _vta_acum_latest: null, _vta_acum_plan_latest: null,
+        _vta_acum_latest: null, _vta_acum_plan_latest: null, _vta_acum_aa_latest: null,
         _ai_latest: null, _ap_latest: null, _aa_latest: null,
       });
     }
@@ -1355,8 +1387,9 @@ function getAccumData(data) {
       ag._mes_last           = r.mes;
       ag._inv_ini_last       = r.inv_ini      ?? null;
       ag._inv_ini_plan_last  = r.inv_ini_plan ?? null;
-      ag._vta_acum_latest       = r.vta_acum_actual   ?? null;
+      ag._vta_acum_latest       = r.vta_acum_actual    ?? null;
       ag._vta_acum_plan_latest  = r.vta_acum_plan     ?? null;
+      ag._vta_acum_aa_latest    = r.vta_acum_ano_ant  ?? null;
       ag._ai_latest             = r.avg_inv_actual    ?? null;
       ag._ap_latest             = r.avg_inv_plan      ?? null;
       ag._aa_latest             = r.avg_inv_aa        ?? null;
@@ -1409,13 +1442,15 @@ function getAccumData(data) {
     // Rotación — alineado con el Excel (hoja Secciones):
     //   Rot Actual  = Ventas Acum YTD (snapshot último mes) / Inventario Actual snapshot (col AN)
     //   Rot Plan    = Ventas Acum Plan YTD (snapshot)       / Promedio Inv Plan (AVERAGEIF meses → col BV)
-    //   Rot Año Ant = Ventas Año Ant YTD (suma del periodo) / Promedio Inv AA   (AVERAGEIF meses → col BV)
-    // El Excel usa snapshot SOLO para Rot Actual (col AN); Plan y AA usan AVERAGEIF (col BV).
+    //   Rot Año Ant = Ventas Acum Año Ant YTD (snapshot)    / Promedio Inv AA   (AVERAGEIF meses → col BV)
+    // El Excel usa snapshot SOLO para Rot Actual denom (col AN); Plan y AA usan AVERAGEIF (col BV).
+    // Los tres numeradores vienen de $BU (Vta Acum YTD) → snapshot del último mes.
     const vtaRotBase     = ag._vta_acum_latest      ?? vta;
     const vtaRotPlanBase = ag._vta_acum_plan_latest ?? vtaPlan;
+    const vtaRotAABase   = ag._vta_acum_aa_latest   ?? vtaAA;
     acc.rot_actual  = (vtaRotBase     && ag._ai_latest)    ? vtaRotBase     / ag._ai_latest    : null;
     acc.rot_plan    = (vtaRotPlanBase && acc.avg_inv_plan)  ? vtaRotPlanBase / acc.avg_inv_plan  : null;
-    acc.rot_ano_ant = (vtaAA          && acc.avg_inv_aa)    ? vtaAA          / acc.avg_inv_aa    : null;
+    acc.rot_ano_ant = (vtaRotAABase   && acc.avg_inv_aa)    ? vtaRotAABase   / acc.avg_inv_aa    : null;
 
     acc.des_vs_plan_rot = (acc.rot_actual != null && acc.rot_plan    != null) ? acc.rot_actual - acc.rot_plan    : null;
     acc.des_vs_aa_rot   = (acc.rot_actual != null && acc.rot_ano_ant != null) ? acc.rot_actual - acc.rot_ano_ant : null;
