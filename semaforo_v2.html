@@ -300,7 +300,7 @@
     #main-table thead tr.thead-group th { top: 0; z-index: 30; }
     /* row 2 of thead (column labels) pinned right under row 1 — top set by JS */
     #main-table thead tr.thead-cols  th { z-index: 29; }
-    #main-table thead th:hover { background: var(--purple-med); color: #ffffff; }
+    #main-table thead tr.thead-cols th:hover { background: var(--purple-med); color: #ffffff; }
     /* gran total row pinned right under the full thead — top set by JS */
     #main-table tbody tr.row-grand-sticky td {
       position: sticky;
@@ -358,7 +358,7 @@
       text-align: center; letter-spacing: 0.08em; text-transform: uppercase;
       border-bottom: 2px solid rgba(255,255,255,0.25); cursor: default;
     }
-    .thead-group th:hover { background: inherit !important; color: inherit !important; }
+    .thead-group th { cursor: default; }
 
     /* ── TOP SECTIONS LIST ── */
     .top-list { display: flex; flex-direction: column; gap: 0; }
