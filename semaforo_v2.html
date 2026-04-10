@@ -1877,6 +1877,8 @@ function computeTotals(rows) {
   const mg_plan    = sumVtaPlan > 0 ? sumUtilPlan / sumVtaPlan : null;
   const mg_ano_ant = sumVtaAA   > 0 ? sumUtilAA   / sumVtaAA   : null;
 
+  const sc = computeScoring(sumVta, sumVtaPlan, mg_real, mg_plan, rotActual, rotPlan);
+
   return {
     vta: sumVta, vtaPlan: sumVtaPlan, vtaAA: sumVtaAA,
     utilidad: sumUtil, utilidad_plan: sumUtilPlan, utilidad_ano_ant: sumUtilAA,
@@ -1888,6 +1890,7 @@ function computeTotals(rows) {
     rot_actual: rotActual, rot_plan: rotPlan, rot_ano_ant: rotAnoAnt,
     des_vs_plan_rot: rotActual != null && rotPlan   != null ? rotActual - rotPlan   : null,
     des_vs_aa_rot:   rotActual != null && rotAnoAnt != null ? rotActual - rotAnoAnt : null,
+    ...sc,
   };
 }
 
@@ -2024,11 +2027,13 @@ function renderTable() {
         <td class="mono">${fmtRot(r.rot_actual)}</td>
         <td class="mono">${fmtRot(r.rot_plan)}</td>
         <td class="mono">${fmtDeltaRot(r.des_vs_plan_rot)}</td>
-        <td class="mono">—</td>
+        <td class="mono">${fmtRot(r.rot_ano_ant)}</td>
         <td class="mono">${fmtDeltaRot(r.des_vs_aa_rot)}</td>
-        <td class="td-calif" style="opacity:0.5">—</td><td class="td-calif" style="opacity:0.5">—</td>
-        <td class="td-calif" style="opacity:0.5">—</td><td class="td-calif" style="opacity:0.5">—</td>
-        <td style="opacity:0.5">—</td>
+        <td class="td-calif mono">${r.calif_vta  != null ? r.calif_vta.toFixed(2)  : '—'}</td>
+        <td class="td-calif mono">${r.calif_mg   != null ? r.calif_mg.toFixed(2)   : '—'}</td>
+        <td class="td-calif mono">${r.calif_rot  != null ? r.calif_rot.toFixed(2)  : '—'}</td>
+        <td class="td-calif mono"><strong>${r.calif_general > 0 ? r.calif_general.toFixed(1) : '—'}</strong></td>
+        <td>${nivelBadge(r.nivel, r.calif_general)}</td>
       </tr>`;
     }
 
