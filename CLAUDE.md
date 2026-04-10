@@ -55,20 +55,34 @@ El logo de Suburbia está **incrustado en Base64** directamente en el HTML (no r
 ## Constantes clave
 
 ### METRIC_MAP — métricas reconocidas del Excel
-| Columna Excel (row[9]) | Campo interno JS |
-|---|---|
-| Ventas Actual $ | `ventas_actual` (sum) |
-| Ventas Plan Piedra $ | `ventas_plan` (sum) |
-| Ventas Acum Actual $ | `vta_acum_actual` (sum) |
-| Ventas Acum Plan Piedra $ | `vta_acum_plan` (sum) |
-| Ventas Año Ant $ | `ventas_ano_ant` (sum) |
-| Utilidad Bruta Acum Actual $ | `utilidad` (sum) |
-| Utilidad Bruta Acum Plan Piedra $ | `utilidad_plan` (sum) |
-| Utilidad Bruta Acum Año Ant $ | `utilidad_ano_ant` (sum) |
-| Inventario Inicial $ | `inv_ini` (sum) |
-| Inventario Inicial Plan Piedra $ | `inv_ini_plan` (sum) + `avg_inv_plan` (avg) |
-| Inventario Actual $ | `avg_inv_actual` (avg) |
-| Inventario Inicial Año Ant $ | `avg_inv_aa` (avg) |
+
+> Auditado 2026-04-10 contra la fila 8 de la hoja `Secciones` del Excel. Los nombres de métricas en col[9] de `01_Consulta Secciones` son los mismos que usa SAP.
+
+| Columna Excel (row[9]) | Campo interno JS | Tipo | Equivalente Excel Secciones |
+|---|---|---|---|
+| Ventas Actual $ | `ventas_actual` | sum | Col G (Real Vta) — SUMIF $A→$T |
+| Ventas Plan Piedra $ | `ventas_plan` | sum | Col H (Real Plan) — SUMIF $A→$T |
+| Ventas Acum Actual $ | `vta_acum_actual` | sum | Col W (Vta Acum, Rot Actual) — SUMIF $BB→$BU |
+| Ventas Acum Plan Piedra $ | `vta_acum_plan` | sum | Col Z (Vta Acum Plan, Rot Plan) — SUMIF $BB→$BU |
+| Ventas Acum Año Ant $ | `vta_acum_ano_ant` | sum | Col AD (Vta Acum AA, Rot AA) — SUMIF $BB→$BU |
+| Ventas Año Ant $ | `ventas_ano_ant` | sum | Col J (Vta Real A.Ant) — SUMIF $A→$T |
+| Utilidad Bruta Actual $ | `utilidad` | sum | Col N usa `Acum Actual $`+CL delta; HTML usa Mensual directo = mismo resultado |
+| Utilidad Bruta Acum Plan Piedra $ | `utilidad_plan_acum` | sum | Col P — SUMIF $BB→$CL (primario, con delta) |
+| Utilidad Bruta Plan Piedra $ | `utilidad_plan_mensual` | sum | Fallback para `utilidad_plan` cuando SAP no tiene Acum |
+| Utilidad Bruta Año Ant $ | `utilidad_ano_ant` | sum | Col S usa `Acum Año Ant $`+CL delta; HTML usa Mensual directo = mismo resultado |
+| Inventario Inicial $ | `inv_ini` | sum | Col AQ — SUMIF $BB→$BX |
+| Inventario Inicial Plan Piedra $ | `inv_ini_plan` (sum) + `avg_inv_plan` (avg) | sum+avg | Col AR (ini) + Col Y (Rot Plan denom) — $BX y $BV |
+| Inventario Actual $ | `avg_inv_actual` | avg | Col V (Prom Inventario, Rot Actual denom) — SUMIF $BB→$AN |
+| Inventario Inicial Año Ant $ | `avg_inv_aa` | avg | Col AC (Inv Pro Año Ant, Rot AA denom) — SUMIF $BB→$BV |
+
+### Util Plan Toggle (⚙ Ajustes → "Util Plan: Acum/Mensual")
+
+El campo `utilidad_plan` se determina por el toggle en el icono de ajustes (⚙):
+
+- **Modo Acum (default)**: usa `utilidad_plan_acum` (`Utilidad Bruta Acum Plan Piedra $`). Como es YTD acumulado de SAP, se aplica mecanismo de **delta** para extraer el valor mensual: `mes[n] = acum[n] - acum[n-1]`. Esto replica la columna CL del Excel.
+- **Modo Mensual (fallback)**: usa `utilidad_plan_mensual` (`Utilidad Bruta Plan Piedra $`) directo.
+
+Al cambiar modo, recalcula en cadena: `utilidad_plan` → `mg_plan` → `des_vs_plan_mg` → `calif_mg` → `calif_general` → `nivel`.
 
 ### MES_ORDER
 `['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']`
@@ -81,8 +95,6 @@ El logo de Suburbia está **incrustado en Base64** directamente en el HTML (no r
 | Rojo | calif_general < 95 |
 | Sin Datos | calif_general == 0 o null |
 
-> ⚠️ El README dice 90/75/60 pero el código usa 100/95. El código manda.
-
 ---
 
 ## Flujo de datos
@@ -90,10 +102,12 @@ El logo de Suburbia está **incrustado en Base64** directamente en el HTML (no r
 ```
 Excel (.xlsx)
   → SheetJS → raw rows[]
-  → parseExcel()  → allData[]       (1 objeto por mes × dirección × división × sección)
-  → onFilter()    → filteredData[]  (subconjunto según filtros activos)
-  → getAccumData()→ rows agregados  (1 objeto por dirección × división × sección, suma/promedio multi-mes)
-  → renderAll()   → DOM
+  → parseExcel()       → allData[]       (1 obj por mes × dir × div × sec)
+  → applyUtilPlanMode()→ allData[]       (asigna utilidad_plan según modo, recalcula scoring)
+  → initDashboard()    → tooltipIndex, filtros, render
+  → onFilter()         → filteredData[]  (subconjunto según filtros activos)
+  → getAccumData()     → rows agregados  (1 obj por dir × div × sec, suma/promedio multi-mes)
+  → renderAll()        → DOM
 ```
 
 **Importante**: `allData` y `filteredData` son per-mes. `getAccumData()` agrega y es lo que usan los charts y la tabla.
@@ -102,18 +116,38 @@ Excel (.xlsx)
 
 ## Campos derivados (calculados en parseExcel / getAccumData)
 
-| Campo | Fórmula |
-|---|---|
-| `vta` | = `ventas_actual` |
-| `vtaPlan` | = `ventas_plan` |
-| `mg_real` | = `utilidad / ventas_actual` (ratio, e.g. 0.35 = 35%) |
-| `mg_plan` | = `utilidad_plan / ventas_plan` |
-| `rot_actual` | = `ventas_actual / avg_inv_actual` |
-| `rot_plan` | = `ventas_plan / avg_inv_plan` |
-| `des_vs_plan_vta` | = `(vta/vtaPlan - 1) × 100` |
-| `des_vs_plan_mg` | = `mg_real - mg_plan` (diferencia en pp) |
-| `des_vs_aa_mg` | = `mg_real / mg_ano_ant` (ratio, se muestra como %) |
-| `des_vs_plan_rot` | = `rot_actual - rot_plan` (delta) |
+### Ventas
+| Campo | Fórmula | Excel equiv |
+|---|---|---|
+| `vta` | = `ventas_actual` | Col G |
+| `vtaPlan` | = `ventas_plan` | Col H |
+| `vtaAA` | = `ventas_ano_ant` | Col J |
+| `des_vs_plan_vta` | = `(vta/vtaPlan - 1) × 100` | Col I: `=(G/H-1)*100` |
+| `des_vs_aa_vta` | = `(vta/vtaAA - 1) × 100` | Col K: `=((G/J)-1)*100` |
+
+### Márgenes (almacenados como ratio, e.g. 0.35 = 35%)
+| Campo | Fórmula | Excel equiv |
+|---|---|---|
+| `mg_real` | = `utilidad / vta` | Col M: `=(N/G)*100` |
+| `mg_plan` | = `utilidad_plan / vtaPlan` | Col O: `=(P/H)*100` |
+| `mg_ano_ant` | = `utilidad_ano_ant / vtaAA` | Col R: `=(S/J)*100` |
+| `des_vs_plan_mg` | = `mg_real - mg_plan` (diferencia en pp) | Col Q: `=M-O` |
+| `des_vs_aa_mg` | = `mg_real - mg_ano_ant` (diferencia en pp) | Col T: `=M-R` |
+
+### Rotación (numerador = Ventas Acum YTD snapshot, no mensual)
+| Campo | Fórmula | Excel equiv |
+|---|---|---|
+| `rot_actual` | = `vta_acum_actual / avg_inv_actual` | Col X: `=W/V` (W=BU, V=AN) |
+| `rot_plan` | = `vta_acum_plan / avg_inv_plan` | Col AA: `=Z/Y` (Z=BU, Y=BV) |
+| `rot_ano_ant` | = `vta_acum_ano_ant / avg_inv_aa` | Col AE: `=AD/AC` (AD=BU, AC=BV) |
+| `des_vs_plan_rot` | = `rot_actual - rot_plan` | Col AB: `=X-AA` |
+| `des_vs_aa_rot` | = `rot_actual - rot_ano_ant` | Col AF: `=X-AE` |
+
+> **Asimetría en denominadores** (igual que el Excel): Rot Actual usa inventario snapshot (AN). Rot Plan y Rot Año Ant usan promedio/AVERAGEIF (BV).
+
+> **Guard MIN_INV**: Si `|denominador| ≤ 1`, rotación = null (evita div/0 por artefactos SAP como inv=-0.00001). Equivale al `IFERROR` del Excel.
+
+> **Totales de rotación**: Se calculan como `Σ(numeradores) / Σ(denominadores)` (no promedio ponderado de ratios). Cada fila almacena `_rot_num_*` y `_rot_den_*` para que `computeTotals` sume correctamente. Esto replica el Excel donde el total = SUMIF total / SUMIF total.
 
 ---
 
@@ -122,9 +156,12 @@ Excel (.xlsx)
 ```js
 computeScoring(vta, vtaPlan, mg_real, mg_plan, rot_actual, rot_plan)
 ```
-- Pesos: `wVta=45`, `wMg=35`, `wRot=20` (fijos en pantalla, readonly)
+- Pesos: `wVta=40`, `wMg=30`, `wRot=25` (fijos en pantalla, readonly)
+- `calif_vta = (vta / vtaPlan) × wVta` — Excel AK: `=(G/H)*AH`
+- `calif_mg  = (mg_real / mg_plan) × wMg` — Excel AM: `=(M/O)*AI`
+- `calif_rot = (rot_actual / rot_plan) × wRot` — Excel AL: `=(X/AA)*AJ`
+- `calif_general = calif_vta + calif_mg + calif_rot` — Excel AN: `=SUM(AK:AM)`
 - Si no hay plan de rotación o wRot=0: el peso de rotación se redistribuye proporcionalmente entre vta y mg
-- `calif_general = calif_vta + calif_mg + calif_rot`
 - Sin vtaPlan o mg_plan → `calif_general = 0` → `nivel = 'sin_datos'`
 
 ---
@@ -153,11 +190,21 @@ computeScoring(vta, vtaPlan, mg_real, mg_plan, rot_actual, rot_plan)
 
 ### Página 2 — Detalle (`btn-p2`)
 - Tabla con todas las secciones, subtotales por división y dirección, gran total
+- **Freeze panes**: las 2 filas de thead (grupos + columnas) y la fila de Gran Total quedan fijas al scrollear (`.table-wrap` es el scroll container con `max-height`, sticky via CSS+JS `updateStickyOffsets`)
 - Sort multi-columna (click encabezado; 3er click resetea al orden default)
-- Paginación (25 filas por página)
-- Tooltip al hover: desglose completo de la sección (ventas, margen, rotación, inventario, calificación)
+- Tooltip al hover: desglose completo de la sección
 - Toggle para ocultar/mostrar columnas de calificación individual
-- Export CSV (38 columnas)
+- Export CSV
+
+### Página 3 — Insights (`btn-p3`)
+- **Brecha al Plan** — Top 25 secciones por mayor desviación negativa vs plan
+- **Tendencia Mensual** — Evolución de KPI por mes (requiere 2+ meses)
+- **Pareto 80/20** — Análisis de concentración de ventas
+
+### Barra superior
+- Navegación: Dashboard / Detalle / Insights
+- **⚙ Ajustes** (dropdown): contiene el toggle "Util Plan: Acum/Mensual"
+- Exportar CSV / Otro archivo
 
 ---
 
@@ -179,7 +226,9 @@ computeScoring(vta, vtaPlan, mg_real, mg_plan, rot_actual, rot_plan)
 Agrupa `filteredData` por `direccion × division × seccion`:
 - Ventas, Utilidad → **suma** acumulada
 - Inventarios → **promedio** entre meses del período
-- Campos de snapshot (inv inicial, mes display para tooltip) → **mes más reciente** del grupo
+- Ventas Acum (rotación) → **snapshot del mes más reciente** (`_vta_acum_latest`, `_vta_acum_plan_latest`, `_vta_acum_aa_latest`)
+- Inventario Actual (rot actual denom) → **snapshot del mes más reciente** (`_ai_latest`)
+- Inv Plan/AA (rot plan/aa denom) → **promedio** (equiv. AVERAGEIF del Excel)
 
 ---
 
@@ -203,3 +252,5 @@ El logo en `semaforo_v2.html` ya está incrustado en Base64 directamente — no 
 - `DEFAULT_SORT` — `[direccion asc, div_cod asc, sec_cod asc]`
 - Filas vacías (`calif_general === 0 && vta === 0`) se excluyen en `onFilter()`
 - El archivo HTML pesa ~1-2 MB por el Base64 del logo — es normal
+- **`border-collapse: separate`** en `#main-table` — necesario para que los bordes de celdas sticky se rendericen correctamente al scrollear
+- **`updateStickyOffsets()`** — mide alturas del thead con `getBoundingClientRect()` y asigna `top` dinámico a la fila de columnas y al Gran Total. Se llama con `requestAnimationFrame` en `renderTable()` y al entrar a Page 2 (porque en `display:none` las alturas son 0)

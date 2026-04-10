@@ -1109,12 +1109,18 @@ function parseExcel(wb) {
 
     // ── Rotaciones ──
     // Numerador: Ventas Acum YTD (snapshot) — alineado con Excel cols W/Z/AD que leen de $BU
+    // Denominador guard: |inv| > 1 evita div/0 por artefactos SAP (ej. inv=-0.00001)
     const vtaRotBase     = r.vta_acum_actual   ?? r.ventas_actual;
     const vtaRotPlanBase = r.vta_acum_plan     ?? r.ventas_plan;
     const vtaRotAABase   = r.vta_acum_ano_ant  ?? r.ventas_ano_ant;
-    r.rot_actual  = (vtaRotBase     && r.avg_inv_actual) ? vtaRotBase     / r.avg_inv_actual : null;
-    r.rot_plan    = (vtaRotPlanBase && r.avg_inv_plan)   ? vtaRotPlanBase / r.avg_inv_plan   : null;
-    r.rot_ano_ant = (vtaRotAABase   && r.avg_inv_aa)     ? vtaRotAABase   / r.avg_inv_aa     : null;
+    const MIN_INV = 1;
+    r.rot_actual  = (vtaRotBase     && r.avg_inv_actual && Math.abs(r.avg_inv_actual) > MIN_INV) ? vtaRotBase     / r.avg_inv_actual : null;
+    r.rot_plan    = (vtaRotPlanBase && r.avg_inv_plan   && Math.abs(r.avg_inv_plan)   > MIN_INV) ? vtaRotPlanBase / r.avg_inv_plan   : null;
+    r.rot_ano_ant = (vtaRotAABase   && r.avg_inv_aa     && Math.abs(r.avg_inv_aa)     > MIN_INV) ? vtaRotAABase   / r.avg_inv_aa     : null;
+    // Store numerator/denominator for total row aggregation (sum/sum, not weighted avg)
+    r._rot_num_actual = vtaRotBase     ?? 0;  r._rot_den_actual = r.avg_inv_actual ?? 0;
+    r._rot_num_plan   = vtaRotPlanBase ?? 0;  r._rot_den_plan   = r.avg_inv_plan   ?? 0;
+    r._rot_num_aa     = vtaRotAABase   ?? 0;  r._rot_den_aa     = r.avg_inv_aa     ?? 0;
 
     // Des vs Plan Rot = Rot Actual - Rot Plan
     r.des_vs_plan_rot = (r.rot_actual != null && r.rot_plan    != null) ? r.rot_actual - r.rot_plan    : null;
@@ -1443,14 +1449,17 @@ function getAccumData(data) {
     //   Rot Actual  = Ventas Acum YTD (snapshot último mes) / Inventario Actual snapshot (col AN)
     //   Rot Plan    = Ventas Acum Plan YTD (snapshot)       / Promedio Inv Plan (AVERAGEIF meses → col BV)
     //   Rot Año Ant = Ventas Acum Año Ant YTD (snapshot)    / Promedio Inv AA   (AVERAGEIF meses → col BV)
-    // El Excel usa snapshot SOLO para Rot Actual denom (col AN); Plan y AA usan AVERAGEIF (col BV).
-    // Los tres numeradores vienen de $BU (Vta Acum YTD) → snapshot del último mes.
     const vtaRotBase     = ag._vta_acum_latest      ?? vta;
     const vtaRotPlanBase = ag._vta_acum_plan_latest ?? vtaPlan;
     const vtaRotAABase   = ag._vta_acum_aa_latest   ?? vtaAA;
-    acc.rot_actual  = (vtaRotBase     && ag._ai_latest)    ? vtaRotBase     / ag._ai_latest    : null;
-    acc.rot_plan    = (vtaRotPlanBase && acc.avg_inv_plan)  ? vtaRotPlanBase / acc.avg_inv_plan  : null;
-    acc.rot_ano_ant = (vtaRotAABase   && acc.avg_inv_aa)    ? vtaRotAABase   / acc.avg_inv_aa    : null;
+    const MIN_INV = 1;
+    acc.rot_actual  = (vtaRotBase     && ag._ai_latest   && Math.abs(ag._ai_latest)   > MIN_INV) ? vtaRotBase     / ag._ai_latest    : null;
+    acc.rot_plan    = (vtaRotPlanBase && acc.avg_inv_plan && Math.abs(acc.avg_inv_plan) > MIN_INV) ? vtaRotPlanBase / acc.avg_inv_plan  : null;
+    acc.rot_ano_ant = (vtaRotAABase   && acc.avg_inv_aa  && Math.abs(acc.avg_inv_aa)   > MIN_INV) ? vtaRotAABase   / acc.avg_inv_aa    : null;
+    // Numerator/denominator for total row (sum/sum approach, like Excel)
+    acc._rot_num_actual = vtaRotBase     ?? 0;  acc._rot_den_actual = ag._ai_latest   ?? 0;
+    acc._rot_num_plan   = vtaRotPlanBase ?? 0;  acc._rot_den_plan   = acc.avg_inv_plan ?? 0;
+    acc._rot_num_aa     = vtaRotAABase   ?? 0;  acc._rot_den_aa     = acc.avg_inv_aa   ?? 0;
 
     acc.des_vs_plan_rot = (acc.rot_actual != null && acc.rot_plan    != null) ? acc.rot_actual - acc.rot_plan    : null;
     acc.des_vs_aa_rot   = (acc.rot_actual != null && acc.rot_ano_ant != null) ? acc.rot_actual - acc.rot_ano_ant : null;
@@ -1852,11 +1861,17 @@ function computeTotals(rows) {
   const sumUtilPlan = rows.reduce((s,r) => s + (r.utilidad_plan     != null ? r.utilidad_plan     : 0), 0);
   const sumUtilAA   = rows.reduce((s,r) => s + (r.utilidad_ano_ant  != null ? r.utilidad_ano_ant  : 0), 0);
 
-  const rotRows = rows.filter(r => r.rot_actual != null && r.vta > 0);
-  const wSum = rotRows.reduce((s,r) => s + r.vta, 0);
-  const rotActual  = wSum > 0 ? rotRows.reduce((s,r) => s + r.rot_actual         * r.vta, 0) / wSum : null;
-  const rotPlan    = wSum > 0 ? rotRows.reduce((s,r) => s + (r.rot_plan    || 0) * r.vta, 0) / wSum : null;
-  const rotAnoAnt  = wSum > 0 ? rotRows.reduce((s,r) => s + (r.rot_ano_ant|| 0) * r.vta, 0) / wSum : null;
+  // Rotación totales: Σ(numeradores) / Σ(denominadores) — replica el Excel (SUMIF total / SUMIF total)
+  const MIN_INV = 1;
+  const sumRotNumAct = rows.reduce((s,r) => s + (r._rot_num_actual ?? 0), 0);
+  const sumRotDenAct = rows.reduce((s,r) => s + (r._rot_den_actual ?? 0), 0);
+  const sumRotNumPln = rows.reduce((s,r) => s + (r._rot_num_plan   ?? 0), 0);
+  const sumRotDenPln = rows.reduce((s,r) => s + (r._rot_den_plan   ?? 0), 0);
+  const sumRotNumAA  = rows.reduce((s,r) => s + (r._rot_num_aa     ?? 0), 0);
+  const sumRotDenAA  = rows.reduce((s,r) => s + (r._rot_den_aa     ?? 0), 0);
+  const rotActual  = Math.abs(sumRotDenAct) > MIN_INV ? sumRotNumAct / sumRotDenAct : null;
+  const rotPlan    = Math.abs(sumRotDenPln) > MIN_INV ? sumRotNumPln / sumRotDenPln : null;
+  const rotAnoAnt  = Math.abs(sumRotDenAA)  > MIN_INV ? sumRotNumAA  / sumRotDenAA  : null;
 
   const mg_real    = sumVta     > 0 ? sumUtil     / sumVta     : null;
   const mg_plan    = sumVtaPlan > 0 ? sumUtilPlan / sumVtaPlan : null;
