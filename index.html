@@ -1448,39 +1448,28 @@ function getAccumData(data) {
     acc.des_vs_plan_mg = (acc.mg_real != null && acc.mg_plan    != null) ? acc.mg_real - acc.mg_plan    : null;
     acc.des_vs_aa_mg   = (acc.mg_real != null && acc.mg_ano_ant != null) ? acc.mg_real - acc.mg_ano_ant : null;
 
-    // Rotación — fórmula N+1 promedio de inventario:
-    //   Para N meses, el denominador = promedio de N+1 puntos de inventario:
-    //     N inventarios iniciales (uno por mes) + Inventario Actual del último mes
-    //   Esto replica la práctica contable estándar (el Inv Actual del último mes
-    //   equivale al Inv Inicial del mes siguiente, o bien al cierre de DIC).
-    //
-    //   Rot Actual  = Ventas Acum YTD / AVG(Inv_Ini_mes1..N + Inv_Actual_últimoMes)
-    //   Rot Plan    = Ventas Acum Plan / AVG(Inv_Ini_Plan_mes1..N + Inv_Ini_Plan_últimoMes)
-    //   Rot Año Ant = Ventas Año Ant   / AVG(Inv_Ini_AA_mes1..N   + Inv_Ini_AA_últimoMes)
+    // Rotación:
+    //   Rot Actual  = Ventas Acum YTD / AVG N+1 inventarios
+    //     Denominador: (Σ Inv_Ini de los N meses + Inv_Actual del último mes) / (N+1)
+    //   Rot Plan    = Ventas Acum Plan / Promedio Inv Plan (AVERAGEIF meses — como Excel BV)
+    //   Rot Año Ant = Ventas Año Ant   / Promedio Inv AA   (AVERAGEIF meses — como Excel BV)
     const vtaRotBase     = ag._vta_acum_latest      ?? vta;
     const vtaRotPlanBase = ag._vta_acum_plan_latest ?? vtaPlan;
+    const vtaRotAABase   = ag._vta_acum_aa_latest   ?? vtaAA;
     const MIN_INV = 1;
 
-    // denomActual: N inv_ini + Inv_Actual del último mes
+    // denomActual: fórmula N+1 — N inv_ini + Inv_Actual del último mes
     const denomActual = (ag._inv_ini_n > 0 && ag._ai_latest != null)
       ? (ag._inv_ini_s + ag._ai_latest) / (ag._inv_ini_n + 1)
       : ag._ai_latest;
-    // denomPlan: N avg_inv_plan + último avg_inv_plan (proxy de cierre del periodo)
-    const denomPlan = (ag._ap_n > 0 && ag._ap_latest != null)
-      ? (ag._ap_s + ag._ap_latest) / (ag._ap_n + 1)
-      : ag._ap_latest;
-    // denomAA: N avg_inv_aa + último avg_inv_aa
-    const denomAA = (ag._aa_n > 0 && ag._aa_latest != null)
-      ? (ag._aa_s + ag._aa_latest) / (ag._aa_n + 1)
-      : ag._aa_latest;
 
-    acc.rot_actual  = (vtaRotBase     && denomActual && Math.abs(denomActual) > MIN_INV) ? vtaRotBase     / denomActual : null;
-    acc.rot_plan    = (vtaRotPlanBase && denomPlan   && Math.abs(denomPlan)   > MIN_INV) ? vtaRotPlanBase / denomPlan   : null;
-    acc.rot_ano_ant = (vtaAA          && denomAA     && Math.abs(denomAA)     > MIN_INV) ? vtaAA          / denomAA     : null;
+    acc.rot_actual  = (vtaRotBase     && denomActual    && Math.abs(denomActual)    > MIN_INV) ? vtaRotBase     / denomActual    : null;
+    acc.rot_plan    = (vtaRotPlanBase && acc.avg_inv_plan && Math.abs(acc.avg_inv_plan) > MIN_INV) ? vtaRotPlanBase / acc.avg_inv_plan : null;
+    acc.rot_ano_ant = (vtaRotAABase   && acc.avg_inv_aa  && Math.abs(acc.avg_inv_aa)   > MIN_INV) ? vtaRotAABase   / acc.avg_inv_aa   : null;
     // Numerator/denominator for total row weighted average
-    acc._rot_num_actual = vtaRotBase     ?? 0;  acc._rot_den_actual = denomActual ?? 0;
-    acc._rot_num_plan   = vtaRotPlanBase ?? 0;  acc._rot_den_plan   = denomPlan   ?? 0;
-    acc._rot_num_aa     = vtaAA          ?? 0;  acc._rot_den_aa     = denomAA     ?? 0;
+    acc._rot_num_actual = vtaRotBase     ?? 0;  acc._rot_den_actual = denomActual      ?? 0;
+    acc._rot_num_plan   = vtaRotPlanBase ?? 0;  acc._rot_den_plan   = acc.avg_inv_plan ?? 0;
+    acc._rot_num_aa     = vtaRotAABase   ?? 0;  acc._rot_den_aa     = acc.avg_inv_aa   ?? 0;
 
     acc.des_vs_plan_rot = (acc.rot_actual != null && acc.rot_plan    != null) ? acc.rot_actual - acc.rot_plan    : null;
     acc.des_vs_aa_rot   = (acc.rot_actual != null && acc.rot_ano_ant != null) ? acc.rot_actual - acc.rot_ano_ant : null;

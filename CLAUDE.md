@@ -134,32 +134,29 @@ Excel (.xlsx)
 | `des_vs_plan_mg` | = `mg_real - mg_plan` (diferencia en pp) | Col Q: `=M-O` |
 | `des_vs_aa_mg` | = `mg_real - mg_ano_ant` (diferencia en pp) | Col T: `=M-R` |
 
-### Rotación — fórmula N+1 promedio de inventario
+### Rotación
 
-Para N meses seleccionados, el denominador de rotación es el promedio de **N+1 puntos de inventario**:
-`(Inv_Ini_mes1 + Inv_Ini_mes2 + … + Inv_Ini_mesN + Inv_Actual_últimoMes) / (N+1)`
+| Campo | Numerador | Denominador |
+|---|---|---|
+| `rot_actual` | `vta_acum_actual` (snapshot último mes) | **N+1 avg**: `(Σ inv_ini de N meses + avg_inv_actual_último) / (N+1)` |
+| `rot_plan` | `vta_acum_plan` (snapshot último mes) | Promedio `avg_inv_plan` del período (equiv. Excel AVERAGEIF BV) |
+| `rot_ano_ant` | `vta_acum_ano_ant` (snapshot último mes) | Promedio `avg_inv_aa` del período (equiv. Excel AVERAGEIF BV) |
+| `des_vs_plan_rot` | — | `rot_actual − rot_plan` |
+| `des_vs_aa_rot` | — | `rot_actual − rot_ano_ant` |
 
-El punto extra (N+1) es el Inventario Actual del último mes del período, que equivale al
-Inventario Inicial del mes siguiente (o al cierre de DIC para el último mes del año).
+**Denominador de `rot_actual` — fórmula N+1**: para N meses seleccionados:
+`(Inv_Ini_mes1 + … + Inv_Ini_mesN + Inv_Actual_últimoMes) / (N+1)`
 
 Ejemplos:
 - ENE solo (N=1): `(Inv_Ini_ENE + Inv_Actual_ENE) / 2`
 - ENE–MAR (N=3): `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
-- Año completo (N=12): `(Inv_Ini_ENE…Inv_Ini_DIC + Inv_Actual_DIC) / 13`
+- Año completo (N=12): `(Inv_Ini_ENE…DIC + Inv_Actual_DIC) / 13`
 
-| Campo | Numerador | Denominador (N+1 avg) |
-|---|---|---|
-| `rot_actual` | `vta_acum_actual` (snapshot último mes) | `(Σ inv_ini mensual + avg_inv_actual_último) / (N+1)` |
-| `rot_plan` | `vta_acum_plan` (snapshot último mes) | `(Σ avg_inv_plan mensual + avg_inv_plan_último) / (N+1)` |
-| `rot_ano_ant` | `ventas_ano_ant` (suma del período) | `(Σ avg_inv_aa mensual + avg_inv_aa_último) / (N+1)` |
-| `des_vs_plan_rot` | — | `rot_actual − rot_plan` |
-| `des_vs_aa_rot` | — | `rot_actual − rot_ano_ant` |
+> **Acumuladores en `getAccumData`**: `_inv_ini_s`/`_inv_ini_n` acumulan `inv_ini` para el denominador N+1 de `rot_actual`. El punto N+1 es `_ai_latest` (Inventario Actual del último mes).
 
 > **Guard MIN_INV**: Si `|denominador| ≤ 1`, rotación = null (evita div/0 por artefactos SAP).
 
-> **Acumuladores en `getAccumData`**: `_inv_ini_s`/`_inv_ini_n` acumulan Inventario Inicial $ para Rot Actual; `_ap_s`/`_ap_n` y `_aa_s`/`_aa_n` para Plan y AA. El punto N+1 se toma del snapshot `_ai_latest`, `_ap_latest`, `_aa_latest`.
-
-> **Totales de rotación**: Cada fila almacena `_rot_num_*` y `_rot_den_*` con los denominadores N+1 calculados, para que `computeTotals` sume numeradores y denominadores correctamente.
+> **Totales de rotación**: Cada fila almacena `_rot_num_*` y `_rot_den_*` para que `computeTotals` sume numeradores y denominadores correctamente.
 
 ---
 

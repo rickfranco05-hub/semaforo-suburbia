@@ -250,25 +250,21 @@ Rot Plan    = BU / BV    (Ventas Acum Plan / AVERAGEIF inventarios plan)
 Rot Año Ant = BU / BV    (Ventas Acum AA   / AVERAGEIF inventarios AA)
 ```
 
-**HTML (`getAccumData`) — fórmula N+1 (práctica contable estándar):**
-
-Para N meses seleccionados, el denominador es el promedio de N+1 puntos de inventario:
+**HTML (`getAccumData`):**
 
 ```
 Rot Actual  = vta_acum_YTD / ((Σ inv_ini_mes[1..N] + inv_actual_últimoMes) / (N+1))
-Rot Plan    = vta_acum_plan / ((Σ avg_inv_plan_mes[1..N] + avg_inv_plan_últimoMes) / (N+1))
-Rot Año Ant = ventas_ano_ant / ((Σ avg_inv_aa_mes[1..N] + avg_inv_aa_últimoMes) / (N+1))
+Rot Plan    = vta_acum_plan / promedio(avg_inv_plan del período)    ← equiv. AVERAGEIF BV
+Rot Año Ant = vta_acum_aa   / promedio(avg_inv_aa del período)      ← equiv. AVERAGEIF BV
 ```
 
-El punto N+1 es el Inventario Actual del último mes (= Inventario Inicial del mes siguiente,
-o el cierre de DIC cuando es el último mes del año).
+Solo `rot_actual` usa la fórmula N+1. El punto N+1 es el Inventario Actual del último mes
+(equivale al Inv Inicial del mes siguiente, o cierre de DIC para el último mes del año).
 
-Ejemplos:
+Ejemplos de denominador de `rot_actual`:
 - ENE solo (N=1): `(Inv_Ini_ENE + Inv_Actual_ENE) / 2`
 - ENE–MAR (N=3): `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
 - Año completo (N=12): `(Inv_Ini_ENE…DIC + Inv_Actual_DIC) / 13`
-
-> **Diferencia con Excel**: El Excel usa snapshot simple (AN) o AVERAGEIF (BV). El HTML usa N+1 porque es la práctica contable estándar y refleja correctamente el capital inmovilizado promedio del período.
 
 ### 5.3 Umbrales del semáforo
 
@@ -313,8 +309,8 @@ SAP BI
 | Mg Real denominador | `Ventas Actual $` (mes actual, col G) | `ventas_actual` sumado en el período |
 | Mg Plan denominador | `Ventas Plan Piedra $` (mes actual, col H) | `ventas_plan` sumado |
 | Rot Actual denominador | Inv Actual snapshot (col AN) | N+1 avg: `(Σ inv_ini + inv_actual_último) / (N+1)` |
-| Rot Plan denominador | AVERAGEIF Inv Plan (col BV) | N+1 avg: `(Σ avg_inv_plan + avg_inv_plan_último) / (N+1)` |
-| Rot Año Ant denominador | AVERAGEIF Inv AA (col BV) | N+1 avg: `(Σ avg_inv_aa + avg_inv_aa_último) / (N+1)` |
+| Rot Plan denominador | AVERAGEIF Inv Plan (col BV) | Promedio `avg_inv_plan` del período (equiv. AVERAGEIF) |
+| Rot Año Ant denominador | AVERAGEIF Inv AA (col BV) | Promedio `avg_inv_aa` del período (equiv. AVERAGEIF) |
 | Número de secciones | ~79 secciones fijas en hoja | Dinámico, según Excel cargado |
 | Pesos scoring | En celda (AH, AI, AJ) por fila | Inputs readonly en UI (mismos valores) |
 | Calif Mg fórmula | `(Mg_Real% / Mg_Plan%) × peso` | `(mg_real / mg_plan) × wMg` (idéntico) |

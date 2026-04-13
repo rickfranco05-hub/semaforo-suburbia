@@ -60,21 +60,20 @@ Documento generado el 2026-03-27. Describe todas las columnas visibles en la tab
 
 ## Rotación (5 columnas)
 
-La rotación usa la **fórmula N+1 de promedio de inventario**: para N meses seleccionados, el denominador es el promedio de N+1 puntos de inventario (N inventarios iniciales + el inventario actual/cierre del último mes del período).
-
-**Ejemplo**: ENE–MAR (N=3) → `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
-
-Esta fórmula es la práctica contable estándar: el inventario actual del último mes equivale al inventario inicial del mes siguiente (o al cierre de diciembre).
-
 | # | Encabezado tabla | Campo JS | Fórmula | Tipo | Color |
 |---|---|---|---|---|---|
 | 17 | Rot Actual | `rot_actual` | `vta_acum_YTD / ((Σ Inv_Ini_mensual + Inv_Actual_últimoMes) / (N+1))` | Veces | Sin color condicional |
-| 18 | Rot Plan | `rot_plan` | `vta_acum_plan_YTD / ((Σ Inv_Ini_Plan_mensual + Inv_Ini_Plan_últimoMes) / (N+1))` | Veces | Sin color (gris) |
+| 18 | Rot Plan | `rot_plan` | `vta_acum_plan_YTD / promedio_inv_plan_período` (AVERAGEIF) | Veces | Sin color (gris) |
 | 19 | Des vs Plan | `des_vs_plan_rot` | `rot_actual − rot_plan` (delta) | Delta veces | Verde ≥ 0, Rojo < 0 |
-| 20 | Rot Año Ant | `rot_ano_ant` | `ventas_ano_ant_suma / ((Σ Inv_Ini_AA_mensual + Inv_Ini_AA_últimoMes) / (N+1))` | Veces | Sin color (gris) |
+| 20 | Rot Año Ant | `rot_ano_ant` | `vta_acum_aa_YTD / promedio_inv_aa_período` (AVERAGEIF) | Veces | Sin color (gris) |
 | 21 | Des vs A.Ant | `des_vs_aa_rot` | `rot_actual − rot_ano_ant` (delta) | Delta veces | Verde ≥ 0, Rojo < 0 |
 
-> **Acumuladores internos**: `_inv_ini_s/_inv_ini_n` (Inv Ini $ para rot_actual), `_ap_s/_ap_n` (plan), `_aa_s/_aa_n` (año ant). El punto N+1 usa `_ai_latest`, `_ap_latest`, `_aa_latest` (snapshot del último mes).
+**Rot Actual — denominador N+1**: `(Σ Inv_Ini de los N meses + Inv_Actual del último mes) / (N+1)`
+- ENE solo: `(Inv_Ini_ENE + Inv_Actual_ENE) / 2`
+- ENE–MAR: `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
+- Acumulador interno: `_inv_ini_s/_inv_ini_n` + snapshot `_ai_latest`
+
+**Rot Plan / Rot Año Ant**: usan promedio simple del período (`avg_inv_plan`, `avg_inv_aa`) — equivalente al AVERAGEIF de la columna BV del Excel.
 
 > **Nota:** En las filas de total (División, Dirección, Gran Total), `Rot Año Ant` muestra "—".
 
