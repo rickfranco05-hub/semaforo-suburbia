@@ -241,23 +241,34 @@ Calif Gen  (AN) = IFERROR(SUM(AK:AM), 0)
 
 > **Nota clave**: el Excel usa directamente `(Mg Real % / Mg Plan %) × peso` (ratio de porcentajes), no la diferencia en pp. El HTML replica esta lógica.
 
-### 5.2 Cálculo de Rotación en `Secciones`
+### 5.2 Cálculo de Rotación — Excel original vs HTML
 
+**Excel (`Secciones`):**
 ```excel
-Rot Actual = W / V
-  W = Ventas Acum YTD actual  (de BU — suma meses pasados)
-  V = Inventario Actual $     (de AN — snapshot mes más reciente)
-
-Rot Plan   = Z / Y
-  Z = Ventas Acum YTD plan    (de BU, misma columna pero con clave plan)
-  Y = Promedio Inv Plan       (de BV — AVERAGEIF meses pasados)
-
-Rot Año Ant = AD / AC
-  AD = Ventas Acum YTD año ant (de BU)
-  AC = Promedio Inv Año Ant    (de BV)
+Rot Actual  = BU / AN    (Ventas Acum YTD / Inventario Actual snapshot)
+Rot Plan    = BU / BV    (Ventas Acum Plan / AVERAGEIF inventarios plan)
+Rot Año Ant = BU / BV    (Ventas Acum AA   / AVERAGEIF inventarios AA)
 ```
 
-> **Asimetría**: Rot Actual usa inventario snapshot (AN) mientras Rot Plan y Rot Año Ant usan promedio (BV). Es así en el Excel original; el HTML replica este comportamiento en `getAccumData`.
+**HTML (`getAccumData`) — fórmula N+1 (práctica contable estándar):**
+
+Para N meses seleccionados, el denominador es el promedio de N+1 puntos de inventario:
+
+```
+Rot Actual  = vta_acum_YTD / ((Σ inv_ini_mes[1..N] + inv_actual_últimoMes) / (N+1))
+Rot Plan    = vta_acum_plan / ((Σ avg_inv_plan_mes[1..N] + avg_inv_plan_últimoMes) / (N+1))
+Rot Año Ant = ventas_ano_ant / ((Σ avg_inv_aa_mes[1..N] + avg_inv_aa_últimoMes) / (N+1))
+```
+
+El punto N+1 es el Inventario Actual del último mes (= Inventario Inicial del mes siguiente,
+o el cierre de DIC cuando es el último mes del año).
+
+Ejemplos:
+- ENE solo (N=1): `(Inv_Ini_ENE + Inv_Actual_ENE) / 2`
+- ENE–MAR (N=3): `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
+- Año completo (N=12): `(Inv_Ini_ENE…DIC + Inv_Actual_DIC) / 13`
+
+> **Diferencia con Excel**: El Excel usa snapshot simple (AN) o AVERAGEIF (BV). El HTML usa N+1 porque es la práctica contable estándar y refleja correctamente el capital inmovilizado promedio del período.
 
 ### 5.3 Umbrales del semáforo
 
@@ -301,9 +312,9 @@ SAP BI
 | Granularidad | Un valor por sección (mes activo fijo) | Multi-mes, seleccionable en filtro |
 | Mg Real denominador | `Ventas Actual $` (mes actual, col G) | `ventas_actual` sumado en el período |
 | Mg Plan denominador | `Ventas Plan Piedra $` (mes actual, col H) | `ventas_plan` sumado |
-| Rot Actual denominador | Inv Actual snapshot (col AN via BU) | `avg_inv_actual` (snapshot último mes del período) |
-| Rot Plan denominador | Promedio Inv Plan (col BV, AVERAGEIF) | `avg_inv_plan` (promedio meses del período = equiv. AVERAGEIF) |
-| Rot Año Ant denominador | Promedio Inv AA (col BV, AVERAGEIF) | `avg_inv_aa` (promedio meses del período = equiv. AVERAGEIF) |
+| Rot Actual denominador | Inv Actual snapshot (col AN) | N+1 avg: `(Σ inv_ini + inv_actual_último) / (N+1)` |
+| Rot Plan denominador | AVERAGEIF Inv Plan (col BV) | N+1 avg: `(Σ avg_inv_plan + avg_inv_plan_último) / (N+1)` |
+| Rot Año Ant denominador | AVERAGEIF Inv AA (col BV) | N+1 avg: `(Σ avg_inv_aa + avg_inv_aa_último) / (N+1)` |
 | Número de secciones | ~79 secciones fijas en hoja | Dinámico, según Excel cargado |
 | Pesos scoring | En celda (AH, AI, AJ) por fila | Inputs readonly en UI (mismos valores) |
 | Calif Mg fórmula | `(Mg_Real% / Mg_Plan%) × peso` | `(mg_real / mg_plan) × wMg` (idéntico) |

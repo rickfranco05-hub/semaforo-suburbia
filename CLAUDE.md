@@ -134,20 +134,32 @@ Excel (.xlsx)
 | `des_vs_plan_mg` | = `mg_real - mg_plan` (diferencia en pp) | Col Q: `=M-O` |
 | `des_vs_aa_mg` | = `mg_real - mg_ano_ant` (diferencia en pp) | Col T: `=M-R` |
 
-### Rotación (numerador = Ventas Acum YTD snapshot, no mensual)
-| Campo | Fórmula | Excel equiv |
+### Rotación — fórmula N+1 promedio de inventario
+
+Para N meses seleccionados, el denominador de rotación es el promedio de **N+1 puntos de inventario**:
+`(Inv_Ini_mes1 + Inv_Ini_mes2 + … + Inv_Ini_mesN + Inv_Actual_últimoMes) / (N+1)`
+
+El punto extra (N+1) es el Inventario Actual del último mes del período, que equivale al
+Inventario Inicial del mes siguiente (o al cierre de DIC para el último mes del año).
+
+Ejemplos:
+- ENE solo (N=1): `(Inv_Ini_ENE + Inv_Actual_ENE) / 2`
+- ENE–MAR (N=3): `(Inv_Ini_ENE + Inv_Ini_FEB + Inv_Ini_MAR + Inv_Actual_MAR) / 4`
+- Año completo (N=12): `(Inv_Ini_ENE…Inv_Ini_DIC + Inv_Actual_DIC) / 13`
+
+| Campo | Numerador | Denominador (N+1 avg) |
 |---|---|---|
-| `rot_actual` | = `vta_acum_actual / avg_inv_actual` | Col X: `=W/V` (W=BU, V=AN) |
-| `rot_plan` | = `vta_acum_plan / avg_inv_plan` | Col AA: `=Z/Y` (Z=BU, Y=BV) |
-| `rot_ano_ant` | = `vta_acum_ano_ant / avg_inv_aa` | Col AE: `=AD/AC` (AD=BU, AC=BV) |
-| `des_vs_plan_rot` | = `rot_actual - rot_plan` | Col AB: `=X-AA` |
-| `des_vs_aa_rot` | = `rot_actual - rot_ano_ant` | Col AF: `=X-AE` |
+| `rot_actual` | `vta_acum_actual` (snapshot último mes) | `(Σ inv_ini mensual + avg_inv_actual_último) / (N+1)` |
+| `rot_plan` | `vta_acum_plan` (snapshot último mes) | `(Σ avg_inv_plan mensual + avg_inv_plan_último) / (N+1)` |
+| `rot_ano_ant` | `ventas_ano_ant` (suma del período) | `(Σ avg_inv_aa mensual + avg_inv_aa_último) / (N+1)` |
+| `des_vs_plan_rot` | — | `rot_actual − rot_plan` |
+| `des_vs_aa_rot` | — | `rot_actual − rot_ano_ant` |
 
-> **Asimetría en denominadores** (igual que el Excel): Rot Actual usa inventario snapshot (AN). Rot Plan y Rot Año Ant usan promedio/AVERAGEIF (BV).
+> **Guard MIN_INV**: Si `|denominador| ≤ 1`, rotación = null (evita div/0 por artefactos SAP).
 
-> **Guard MIN_INV**: Si `|denominador| ≤ 1`, rotación = null (evita div/0 por artefactos SAP como inv=-0.00001). Equivale al `IFERROR` del Excel.
+> **Acumuladores en `getAccumData`**: `_inv_ini_s`/`_inv_ini_n` acumulan Inventario Inicial $ para Rot Actual; `_ap_s`/`_ap_n` y `_aa_s`/`_aa_n` para Plan y AA. El punto N+1 se toma del snapshot `_ai_latest`, `_ap_latest`, `_aa_latest`.
 
-> **Totales de rotación**: Se calculan como `Σ(numeradores) / Σ(denominadores)` (no promedio ponderado de ratios). Cada fila almacena `_rot_num_*` y `_rot_den_*` para que `computeTotals` sume correctamente. Esto replica el Excel donde el total = SUMIF total / SUMIF total.
+> **Totales de rotación**: Cada fila almacena `_rot_num_*` y `_rot_den_*` con los denominadores N+1 calculados, para que `computeTotals` sume numeradores y denominadores correctamente.
 
 ---
 
