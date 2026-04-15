@@ -325,28 +325,32 @@
     }
 
     /* ── FROZEN COLUMNS: Dir / División / Sección ──────────────────────────
-       Fixed widths make left offsets predictable.
-       Z-index 31 on thead corners (above z-index:30 group row).
-       Z-index 29 on gran-total corners (above regular col z-index:1).
-       background: inherit on tbody lets total rows keep their colored bg. */
-    #main-table thead th:nth-child(1),
-    #main-table thead th:nth-child(2),
-    #main-table thead th:nth-child(3) { position: sticky; z-index: 31; background: var(--purple-dark); }
-    #main-table thead th:nth-child(1) { left: 0;     min-width: 60px;  width: 60px;  }
-    #main-table thead th:nth-child(2) { left: 60px;  min-width: 120px; width: 120px; }
-    #main-table thead th:nth-child(3) { left: 180px; min-width: 150px; width: 150px; border-right: 2px solid rgba(217,54,144,0.4); }
+       thead: z-index 31 so corners sit above the group row (z-index:30).
+       DATA rows only (:not(.row-total)): explicit white bg — "inherit" gives
+       transparent because <tr> has no background in normal rows.
+       TOTAL rows (row-total): only pin td:nth-child(1) which is the colspan=3
+       label; nth-child(2,3) in total rows are DATA cells, not dimension cols.
+       Grand-total corners: z-index 29 (above regular col z-index:1). */
 
-    #main-table tbody td:nth-child(1),
-    #main-table tbody td:nth-child(2),
-    #main-table tbody td:nth-child(3) { position: sticky; z-index: 1; background: inherit; }
-    #main-table tbody td:nth-child(1) { left: 0;    }
-    #main-table tbody td:nth-child(2) { left: 60px; }
-    #main-table tbody td:nth-child(3) { left: 180px; border-right: 2px solid rgba(217,54,144,0.4); }
+    /* thead frozen widths & positions */
+    #main-table thead th:nth-child(1) { position: sticky; left: 0;     min-width: 60px;  width: 60px;  z-index: 31; background: var(--purple-dark); }
+    #main-table thead th:nth-child(2) { position: sticky; left: 60px;  min-width: 120px; width: 120px; z-index: 31; background: var(--purple-dark); }
+    #main-table thead th:nth-child(3) { position: sticky; left: 180px; min-width: 150px; width: 150px; z-index: 31; background: var(--purple-dark); border-right: 2px solid rgba(217,54,144,0.4); }
 
-    /* gran-total corner cells: bump z-index above regular sticky cols */
-    #main-table tbody tr.row-grand-sticky td:nth-child(1),
-    #main-table tbody tr.row-grand-sticky td:nth-child(2),
-    #main-table tbody tr.row-grand-sticky td:nth-child(3) { z-index: 29; }
+    /* data row frozen cells — explicit solid bg, no transparency */
+    #main-table tbody tr:not(.row-total) td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: #fff; }
+    #main-table tbody tr:not(.row-total) td:nth-child(2) { position: sticky; left: 60px;  z-index: 1; background: #fff; }
+    #main-table tbody tr:not(.row-total) td:nth-child(3) { position: sticky; left: 180px; z-index: 1; background: #fff; border-right: 2px solid rgba(217,54,144,0.4); }
+    /* hover: restore surface2 on frozen data cells */
+    #main-table tbody tr:not(.row-total):hover td:nth-child(1),
+    #main-table tbody tr:not(.row-total):hover td:nth-child(2),
+    #main-table tbody tr:not(.row-total):hover td:nth-child(3) { background: var(--surface2); }
+
+    /* total rows: only the colspan=3 label (always nth-child(1)) needs pinning;
+       background: inherit works here because <tr> has explicit inline bg color */
+    #main-table tbody tr.row-total td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: inherit; }
+    /* grand-total label corner: higher z-index so it clears scrolled content */
+    #main-table tbody tr.row-grand-sticky td:nth-child(1) { z-index: 29; background: #D93690; }
     .sort-num { font-size: 0.6rem; color: var(--accent2); margin-left: 0.15rem; vertical-align: super; }
     .sort-arrow { display: inline-block; margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
     th.sort-asc  .sort-arrow { opacity: 1; }
