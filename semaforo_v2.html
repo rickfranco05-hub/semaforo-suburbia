@@ -316,41 +316,43 @@
     /* row 2 of thead (column labels) pinned right under row 1 — top set by JS */
     #main-table thead tr.thead-cols  th { z-index: 29; }
     #main-table thead tr.thead-cols th:hover { background: var(--purple-med); color: #ffffff; }
-    /* gran total row pinned right under the full thead — top set by JS */
+    /* gran total row pinned right under the full thead — top set by JS.
+       z-index:2 (not 28) so frozen dim cols (z-index:5) appear ABOVE gran total
+       value cells when scrolling horizontally. Data rows have z-index:auto so
+       gran total (z-index:2) still sits above them when scrolling vertically. */
     #main-table tbody tr.row-grand-sticky td {
       position: sticky;
-      z-index: 28;
+      z-index: 2;
       background: #D93690 !important;
       color: #fff;
     }
 
     /* ── FROZEN COLUMNS: Dir / División / Sección ──────────────────────────
-       thead: z-index 31 so corners sit above the group row (z-index:30).
-       DATA rows only (:not(.row-total)): explicit white bg — "inherit" gives
-       transparent because <tr> has no background in normal rows.
-       TOTAL rows (row-total): only pin td:nth-child(1) which is the colspan=3
-       label; nth-child(2,3) in total rows are DATA cells, not dimension cols.
-       Grand-total corners: z-index 29 (above regular col z-index:1). */
+       Z-index ladder:
+         thead corners      → 31  (above thead group row z-index:30)
+         frozen data cols   → 5   (above gran total non-corner cells z-index:2)
+         gran total corner  → 10  (above frozen data cols AND gran total cells)
+       DATA rows (:not(.row-total)): explicit #fff — "inherit" gives transparent.
+       TOTAL rows: only td:nth-child(1) pinned (it's the colspan=3 label);
+         nth-child(2,3) in total rows are data cells, NOT dimension cols. */
 
-    /* thead frozen widths & positions */
+    /* thead: frozen widths & left positions */
     #main-table thead th:nth-child(1) { position: sticky; left: 0;     min-width: 60px;  width: 60px;  z-index: 31; background: var(--purple-dark); }
     #main-table thead th:nth-child(2) { position: sticky; left: 60px;  min-width: 120px; width: 120px; z-index: 31; background: var(--purple-dark); }
     #main-table thead th:nth-child(3) { position: sticky; left: 180px; min-width: 150px; width: 150px; z-index: 31; background: var(--purple-dark); border-right: 2px solid rgba(217,54,144,0.4); }
 
-    /* data row frozen cells — explicit solid bg, no transparency */
-    #main-table tbody tr:not(.row-total) td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: #fff; }
-    #main-table tbody tr:not(.row-total) td:nth-child(2) { position: sticky; left: 60px;  z-index: 1; background: #fff; }
-    #main-table tbody tr:not(.row-total) td:nth-child(3) { position: sticky; left: 180px; z-index: 1; background: #fff; border-right: 2px solid rgba(217,54,144,0.4); }
-    /* hover: restore surface2 on frozen data cells */
+    /* data row frozen cells */
+    #main-table tbody tr:not(.row-total) td:nth-child(1) { position: sticky; left: 0;     z-index: 5; background: #fff; }
+    #main-table tbody tr:not(.row-total) td:nth-child(2) { position: sticky; left: 60px;  z-index: 5; background: #fff; }
+    #main-table tbody tr:not(.row-total) td:nth-child(3) { position: sticky; left: 180px; z-index: 5; background: #fff; border-right: 2px solid rgba(217,54,144,0.4); }
     #main-table tbody tr:not(.row-total):hover td:nth-child(1),
     #main-table tbody tr:not(.row-total):hover td:nth-child(2),
     #main-table tbody tr:not(.row-total):hover td:nth-child(3) { background: var(--surface2); }
 
-    /* total rows: only the colspan=3 label (always nth-child(1)) needs pinning;
-       background: inherit works here because <tr> has explicit inline bg color */
-    #main-table tbody tr.row-total td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: inherit; }
-    /* grand-total label corner: higher z-index so it clears scrolled content */
-    #main-table tbody tr.row-grand-sticky td:nth-child(1) { z-index: 29; background: #D93690; }
+    /* total rows: pin only the colspan=3 label cell */
+    #main-table tbody tr.row-total td:nth-child(1) { position: sticky; left: 0; z-index: 5; background: inherit; }
+    /* gran total corner: highest in tbody — above both frozen cols and gran total cells */
+    #main-table tbody tr.row-grand-sticky td:nth-child(1) { z-index: 10; background: #D93690; }
     .sort-num { font-size: 0.6rem; color: var(--accent2); margin-left: 0.15rem; vertical-align: super; }
     .sort-arrow { display: inline-block; margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
     th.sort-asc  .sort-arrow { opacity: 1; }
