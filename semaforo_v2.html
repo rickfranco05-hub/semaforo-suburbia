@@ -303,9 +303,9 @@
       position: relative;
     }
     /* separate borders so sticky cells render borders correctly on scroll */
-    #main-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.82rem; }
+    #main-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.72rem; }
     #main-table thead th {
-      background: var(--purple-dark); padding: 0.7rem 1rem; text-align: left;
+      background: var(--purple-dark); padding: 0.28rem 0.55rem; text-align: left;
       font-weight: 600; color: #ffffff; font-size: 0.72rem; text-transform: uppercase;
       letter-spacing: 0.04em; cursor: pointer; user-select: none; white-space: nowrap;
       border-bottom: 1px solid rgba(255,255,255,0.15); transition: background 0.15s, color 0.15s;
@@ -359,7 +359,7 @@
     th:not(.sort-asc):not(.sort-desc) .sort-arrow::after { content: '↕'; }
     tbody tr { transition: background 0.12s; cursor: default; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 0.58rem 1rem; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    tbody td { padding: 0.32rem 0.55rem; white-space: nowrap; border-bottom: 1px solid var(--border); }
     tbody tr:last-child td { border-bottom: none; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .pos  { color: var(--green); }
@@ -372,7 +372,7 @@
     /* ── NIVEL BADGES ── */
     .nivel-badge {
       display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.22rem 0.55rem; border-radius: 999px; font-size: 0.72rem;
+      padding: 0.14rem 0.38rem; border-radius: 999px; font-size: 0.64rem;
       font-weight: 600; font-family: 'JetBrains Mono', monospace; white-space: nowrap;
     }
     .n-verde     { background: rgba(21,128,61,0.12);   color: var(--green);  border: 1px solid rgba(21,128,61,0.3);    }
