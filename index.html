@@ -537,7 +537,7 @@
         <div class="scorecard"><div class="sc-label">Utilidad Bruta Acum</div><div class="sc-value" id="sc-util">—</div><span class="sc-badge badge-neu" id="sc-util-b"></span></div>
         <div class="scorecard"><div class="sc-label">Margen Real %</div><div class="sc-value" id="sc-mg">—</div><span class="sc-badge badge-neu" id="sc-mg-b"></span></div>
         <div class="scorecard"><div class="sc-label">Rotación Promedio</div><div class="sc-value" id="sc-rot">—</div><span class="sc-badge badge-neu" id="sc-rot-b"></span></div>
-        <div class="scorecard"><div class="sc-label">Calificación Promedio</div><div class="sc-value" id="sc-cal">—</div><span class="sc-badge" id="sc-cal-b"></span></div>
+        <div class="scorecard"><div class="sc-label">Calificación Total</div><div class="sc-value" id="sc-cal">—</div><span class="sc-badge" id="sc-cal-b"></span></div>
       </div>
 
       <!-- Row 1: Semáforo donut + Participación venta por División (equal columns) -->
@@ -1551,10 +1551,10 @@ function renderScorecards() {
 
   // Calificación
   const calRows = d.filter(r => r.calif_general > 0);
-  const calAvg  = calRows.length ? calRows.reduce((s,r) => s + r.calif_general, 0) / calRows.length : null;
-  const calNiv  = calAvg != null ? getNivel(calAvg) : 'sin_datos';
+  const calSum  = calRows.length ? calRows.reduce((s,r) => s + r.calif_general, 0) : null;
+  const calNiv  = calSum != null ? getNivel(calSum / calRows.length) : 'sin_datos';
   const cfg     = NIVEL[calNiv];
-  document.getElementById('sc-cal').textContent = calAvg != null ? calAvg.toFixed(1) : '—';
+  document.getElementById('sc-cal').textContent = calSum != null ? calSum.toFixed(1) : '—';
   const calBadge = document.getElementById('sc-cal-b');
   calBadge.textContent       = cfg.label;
   calBadge.className         = 'sc-badge';
