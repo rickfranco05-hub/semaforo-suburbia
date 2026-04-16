@@ -1804,11 +1804,15 @@ function renderVtaVsInv() {
   const d = getAccumData(filteredData);
   if (!d.length) return;
 
+  const divFil = (document.getElementById('f-div')?.value || '').trim();
+  const bySection = !!divFil;
+  const keyFn = r => bySection ? r.seccion : r.division;
+
   const divMap = new Map();
   for (const r of d) {
-    if (!r.division) continue;
-    if (!divMap.has(r.division)) divMap.set(r.division, { vta: 0, inv: 0 });
-    const g = divMap.get(r.division);
+    const k = keyFn(r); if (!k) continue;
+    if (!divMap.has(k)) divMap.set(k, { vta: 0, inv: 0 });
+    const g = divMap.get(k);
     g.vta += r.vta || 0;
     g.inv += r.prom_inv_act || 0;
   }
@@ -1849,11 +1853,15 @@ function renderInvPlanReal() {
   const d = getAccumData(filteredData);
   if (!d.length) return;
 
+  const divFil = (document.getElementById('f-div')?.value || '').trim();
+  const bySection = !!divFil;
+  const keyFn = r => bySection ? r.seccion : r.division;
+
   const divMap = new Map();
   for (const r of d) {
-    if (!r.division) continue;
-    if (!divMap.has(r.division)) divMap.set(r.division, { real: 0, plan: 0 });
-    const g = divMap.get(r.division);
+    const k = keyFn(r); if (!k) continue;
+    if (!divMap.has(k)) divMap.set(k, { real: 0, plan: 0 });
+    const g = divMap.get(k);
     g.real += r.inv_ini_real     || 0;
     g.plan += r.inv_ini_plan_val || 0;
   }
