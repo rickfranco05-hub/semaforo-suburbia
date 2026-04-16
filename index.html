@@ -316,9 +316,11 @@
     /* row 2 of thead (column labels) pinned right under row 1 — top set by JS */
     #main-table thead tr.thead-cols  th { z-index: 29; }
     #main-table thead tr.thead-cols th:hover { background: var(--purple-med); color: #ffffff; }
-    /* gran total row: only the corner label cell is sticky (pinned below thead by JS top).
-       Non-corner cells scroll normally so they never cover frozen dim cols horizontally. */
+    /* gran total row: ALL cells sticky-top (band scrolls horizontally with table),
+       z-index:1 so frozen dim cols (z:5) paint ABOVE them when overlapping. */
     #main-table tbody tr.row-grand-sticky td {
+      position: sticky;
+      z-index: 1;
       background: #D93690 !important;
       color: #fff;
     }
@@ -2135,8 +2137,9 @@ function updateStickyOffsets() {
 
   // Gran total row sits directly below both thead rows
   const grandTop = h1 + h2;
-  const grandCorner = tbl.querySelector('#tbl-body tr.row-grand-sticky td:first-child');
-  if (grandCorner) grandCorner.style.top = grandTop + 'px';
+  tbl.querySelectorAll('#tbl-body tr.row-grand-sticky td').forEach(td => {
+    td.style.top = grandTop + 'px';
+  });
 }
 window.addEventListener('resize', updateStickyOffsets);
 
