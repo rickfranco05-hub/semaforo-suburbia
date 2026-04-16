@@ -349,7 +349,7 @@
     /* total rows: pin only the colspan=3 label cell */
     #main-table tbody tr.row-total td:nth-child(1) { position: sticky; left: 0; z-index: 5; background: inherit; }
     /* gran total corner: highest in tbody — above both frozen cols and gran total cells */
-    #main-table tbody tr.row-grand-sticky td:nth-child(1) { z-index: 10; background: #D93690; }
+    #main-table tbody tr.row-grand-sticky td:nth-child(1) { position: static !important; z-index: auto; background: #D93690; border-right: 2px solid rgba(255,255,255,0.3); }
     .sort-num { font-size: 0.6rem; color: var(--accent2); margin-left: 0.15rem; vertical-align: super; }
     .sort-arrow { display: inline-block; margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
     th.sort-asc  .sort-arrow { opacity: 1; }
