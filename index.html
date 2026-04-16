@@ -1550,11 +1550,11 @@ function renderScorecards() {
   setBadge('sc-rot-b', desRot != null ? `vs Plan: ${fmtDeltaRot(desRot)}` : '—', desRot);
 
   // Calificación
-  const calRows = d.filter(r => r.calif_general > 0);
-  const calSum  = calRows.length ? calRows.reduce((s,r) => s + r.calif_general, 0) : null;
-  const calNiv  = calSum != null ? getNivel(calSum / calRows.length) : 'sin_datos';
+  const gt      = computeTotals(d);
+  const calVal  = gt.calif_general > 0 ? gt.calif_general : null;
+  const calNiv  = calVal != null ? getNivel(calVal) : 'sin_datos';
   const cfg     = NIVEL[calNiv];
-  document.getElementById('sc-cal').textContent = calSum != null ? calSum.toFixed(1) : '—';
+  document.getElementById('sc-cal').textContent = calVal != null ? calVal.toFixed(1) : '—';
   const calBadge = document.getElementById('sc-cal-b');
   calBadge.textContent       = cfg.label;
   calBadge.className         = 'sc-badge';
