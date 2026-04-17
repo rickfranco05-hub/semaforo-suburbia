@@ -2784,17 +2784,17 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── SNAPSHOT STARTUP DETECTION ── */
-(function() {
+window.addEventListener('load', function() {
   if (!window.__SEMAFORO_SNAPSHOT__) return;
   const snap = window.__SEMAFORO_SNAPSHOT__;
   if (!snap.data || !snap.data.length) return;
   allData = snap.data;
   applyUtilPlanMode();
-  initDashboard();
-  // Restore filters
+  initDashboard();                          // populates dropdowns + mes pills
   if (snap.filters) {
     const f = snap.filters;
-    if (f.dir) { document.getElementById('f-dir').value = f.dir; populateFilters(); }
+    if (f.dir) document.getElementById('f-dir').value = f.dir;
+    refreshDivisionFilter();                // update div options for selected dir
     if (f.div) document.getElementById('f-div').value = f.div;
     if (f.sec) document.getElementById('f-sec').value = f.sec;
     if (f.meses && f.meses.length) {
@@ -2802,9 +2802,9 @@ document.addEventListener('keydown', e => {
         if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
       });
     }
-    onFilter();
   }
-})();
+  onFilter();
+});
 </script>
 
 <!-- CHATBOT FAB -->
