@@ -572,6 +572,12 @@
         <div class="chart-wrap" style="height:220px"><canvas id="ch-inv-plan-real"></canvas></div>
       </div>
 
+      <!-- Row 4: Meses de Inventario por Mes -->
+      <div class="chart-card" style="margin-bottom:1rem">
+        <div class="chart-title" style="color:var(--purple-dark)">Meses de Inventario por Mes</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-meses-inv"></canvas></div>
+      </div>
+
       <!-- Segmentadores para Top Secciones -->
       <div class="top-filters-bar">
         <div style="font-size:0.75rem;font-weight:700;color:var(--purple-dark);align-self:center">Filtrar top secciones:</div>
@@ -1577,7 +1583,7 @@ function setBadge(id, text, val) {
 ================================================================ */
 function killChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-function renderCharts() { renderDonut(); renderVtaDivPie(); renderDistBar(); renderTopSections(); renderVtaVsInv(); renderInvPlanReal(); }
+function renderCharts() { renderDonut(); renderVtaDivPie(); renderDistBar(); renderTopSections(); renderVtaVsInv(); renderInvPlanReal(); renderMesesInv(); }
 
 function renderDonut() {
   killChart('donut');
@@ -1900,6 +1906,45 @@ function renderInvPlanReal() {
 /* ================================================================
    TABLE TOTALS
 ================================================================ */
+function renderMesesInv() {
+  killChart('meses-inv');
+  if (!filteredData.length) return;
+
+  const MES_ORDER = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const mesMap = new Map();
+  for (const r of filteredData) {
+    if (!r.mes) continue;
+    if (!mesMap.has(r.mes)) mesMap.set(r.mes, { inv: 0, vta: 0 });
+    const g = mesMap.get(r.mes);
+    g.inv += r.avg_inv_actual || 0;
+    g.vta += r.ventas_actual  || 0;
+  }
+  const meses = MES_ORDER.filter(m => mesMap.has(m));
+  if (!meses.length) return;
+  const data = meses.map(m => { const g = mesMap.get(m); return g.vta > 0 ? +(g.inv / g.vta).toFixed(2) : 0; });
+
+  const ctx = document.getElementById('ch-meses-inv').getContext('2d');
+  charts['meses-inv'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [{ label: 'Meses de Inventario', data, backgroundColor: '#67308C88', borderColor: '#67308C', borderWidth:1, borderRadius:4, hoverBackgroundColor: '#67308CBB', hoverBorderWidth:2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor:'#FFF', borderColor:'rgba(103,48,140,0.2)', borderWidth:1, titleColor:'#2D0A1A', bodyColor:'#6B2048',
+          callbacks: { label: c => ` ${c.raw.toFixed(2)} meses` } }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{ color:'#6B2048', font:{size:9,family:'DM Sans'} } },
+        y: { grid:{color:'rgba(0,0,0,0.06)'}, ticks:{ color:'#6B2048', font:{size:8,family:'JetBrains Mono'}, callback: v => v.toFixed(1)+'m' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
 function computeTotals(rows) {
   const sumVta      = rows.reduce((s,r) => s + (r.vta      || 0), 0);
   const sumVtaPlan  = rows.reduce((s,r) => s + (r.vtaPlan  || 0), 0);
