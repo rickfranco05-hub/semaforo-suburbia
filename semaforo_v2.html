@@ -2627,7 +2627,7 @@ function renderMOI() {
 /* ================================================================
    SNAPSHOT — descarga HTML autocontenido con datos embebidos
 ================================================================ */
-function downloadSnapshot() {
+async function downloadSnapshot() {
   if (!allData || !allData.length) { alert('No hay datos cargados.'); return; }
   const filters = {
     dir:   document.getElementById('f-dir')?.value  || '',
@@ -2635,16 +2635,26 @@ function downloadSnapshot() {
     meses: [...document.querySelectorAll('#f-mes .slicer-btn.active')].map(b => b.dataset.mes),
     sec:   document.getElementById('f-sec')?.value  || ''
   };
-  const snap = JSON.stringify({ data: allData, filters, ts: new Date().toISOString().slice(0,10) });
-  const inject = `<script id="__semaforo_snap__">window.__SEMAFORO_SNAPSHOT__=${snap};<\/script>`;
-  // Get clean source HTML (remove any previous snapshot embed)
-  let html = document.documentElement.outerHTML;
+  const ts = new Date().toISOString().slice(0,10);
+
+  // Fetch clean HTML source so the snapshot starts from a pristine state
+  let html;
+  try {
+    const res = await fetch(location.href.split('?')[0]);
+    html = await res.text();
+  } catch(e) {
+    alert('No se pudo obtener el HTML base para el snapshot. Asegúrate de estar en la versión en línea (GitHub Pages).'); return;
+  }
+
+  // Remove any previous embedded snapshot, then inject fresh one
   html = html.replace(/<script id="__semaforo_snap__">[\s\S]*?<\/script>/g, '');
-  html = html.replace('</head>', inject + '</head>');
+  const snap = JSON.stringify({ data: allData, filters, ts });
+  html = html.replace('</head>', `<script id="__semaforo_snap__">window.__SEMAFORO_SNAPSHOT__=${snap};<\/script></head>`);
+
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `semaforo_suburbia_${filters.ts || new Date().toISOString().slice(0,10)}.html`;
+  a.download = `semaforo_suburbia_${ts}.html`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(a.href);
 }
