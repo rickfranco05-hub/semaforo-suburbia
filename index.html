@@ -2793,28 +2793,32 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.id === 'chat-input') sendChatMessage();
 });
 
-/* ── SNAPSHOT STARTUP DETECTION ── */
-window.addEventListener('load', function() {
-  if (!window.__SEMAFORO_SNAPSHOT__) return;
-  const snap = window.__SEMAFORO_SNAPSHOT__;
-  if (!snap.data || !snap.data.length) return;
-  allData = snap.data;
-  applyUtilPlanMode();
-  initDashboard();                          // populates dropdowns + mes pills
-  if (snap.filters) {
-    const f = snap.filters;
-    if (f.dir) document.getElementById('f-dir').value = f.dir;
-    refreshDivisionFilter();                // update div options for selected dir
-    if (f.div) document.getElementById('f-div').value = f.div;
-    if (f.sec) document.getElementById('f-sec').value = f.sec;
-    if (f.meses && f.meses.length) {
-      document.querySelectorAll('#f-mes .slicer-btn').forEach(b => {
-        if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
-      });
+/* ── SNAPSHOT STARTUP DETECTION ──
+   Runs synchronously: CDN scripts already loaded (blocking in <head>),
+   DOM fully parsed (this script is at end of <body>). No event needed. */
+if (window.__SEMAFORO_SNAPSHOT__) {
+  try {
+    const snap = window.__SEMAFORO_SNAPSHOT__;
+    if (snap.data && snap.data.length) {
+      allData = snap.data;
+      applyUtilPlanMode();
+      initDashboard();
+      if (snap.filters) {
+        const f = snap.filters;
+        if (f.dir) document.getElementById('f-dir').value = f.dir;
+        refreshDivisionFilter();
+        if (f.div) document.getElementById('f-div').value = f.div;
+        if (f.sec) document.getElementById('f-sec').value = f.sec;
+        if (f.meses && f.meses.length) {
+          document.querySelectorAll('#f-mes .slicer-btn').forEach(b => {
+            if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
+          });
+        }
+      }
+      onFilter();
     }
-  }
-  onFilter();
-});
+  } catch(e) { console.error('Snapshot init error:', e); }
+}
 </script>
 
 <!-- CHATBOT FAB -->
