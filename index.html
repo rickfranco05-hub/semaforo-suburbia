@@ -487,6 +487,7 @@
     </div>
     <div class="header-actions">
       <button class="btn-sec" onclick="exportCSV()">&#11015; Exportar CSV</button>
+      <button class="btn-sec" id="btn-snapshot" onclick="downloadSnapshot()" style="display:none">&#128190; Descargar Snapshot</button>
       <button class="btn-sec" onclick="resetApp()">&#8635; Otro archivo</button>
     </div>
   </div>
@@ -1307,6 +1308,7 @@ function initDashboard() {
   updateWeightTotal();
   document.getElementById('upload-screen').style.display = 'none';
   document.getElementById('dashboard').style.display     = 'block';
+  document.getElementById('btn-snapshot').style.display  = 'inline-flex';
   showPage('p1');
   onFilter();
 }
@@ -2622,6 +2624,31 @@ function renderMOI() {
 /* ================================================================
    RESET
 ================================================================ */
+/* ================================================================
+   SNAPSHOT — descarga HTML autocontenido con datos embebidos
+================================================================ */
+function downloadSnapshot() {
+  if (!allData || !allData.length) { alert('No hay datos cargados.'); return; }
+  const filters = {
+    dir:   document.getElementById('f-dir')?.value  || '',
+    div:   document.getElementById('f-div')?.value  || '',
+    meses: [...document.querySelectorAll('#f-mes .slicer-btn.active')].map(b => b.dataset.mes),
+    sec:   document.getElementById('f-sec')?.value  || ''
+  };
+  const snap = JSON.stringify({ data: allData, filters, ts: new Date().toISOString().slice(0,10) });
+  const inject = `<script id="__semaforo_snap__">window.__SEMAFORO_SNAPSHOT__=${snap};<\/script>`;
+  // Get clean source HTML (remove any previous snapshot embed)
+  let html = document.documentElement.outerHTML;
+  html = html.replace(/<script id="__semaforo_snap__">[\s\S]*?<\/script>/g, '');
+  html = html.replace('</head>', inject + '</head>');
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `semaforo_suburbia_${filters.ts || new Date().toISOString().slice(0,10)}.html`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(a.href);
+}
+
 function resetApp() {
   allData=[]; filteredData=[]; tooltipIndex={};
   currentPage=1; sortKeys=DEFAULT_SORT.map(k=>({...k}));
@@ -2755,6 +2782,29 @@ async function sendChatMessage() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.id === 'chat-input') sendChatMessage();
 });
+
+/* ── SNAPSHOT STARTUP DETECTION ── */
+(function() {
+  if (!window.__SEMAFORO_SNAPSHOT__) return;
+  const snap = window.__SEMAFORO_SNAPSHOT__;
+  if (!snap.data || !snap.data.length) return;
+  allData = snap.data;
+  applyUtilPlanMode();
+  initDashboard();
+  // Restore filters
+  if (snap.filters) {
+    const f = snap.filters;
+    if (f.dir) { document.getElementById('f-dir').value = f.dir; populateFilters(); }
+    if (f.div) document.getElementById('f-div').value = f.div;
+    if (f.sec) document.getElementById('f-sec').value = f.sec;
+    if (f.meses && f.meses.length) {
+      document.querySelectorAll('#f-mes .slicer-btn').forEach(b => {
+        if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
+      });
+    }
+    onFilter();
+  }
+})();
 </script>
 
 <!-- CHATBOT FAB -->
