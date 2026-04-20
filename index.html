@@ -2645,7 +2645,7 @@ async function downloadSnapshot() {
     alert('Usa esta función desde la versión en línea (GitHub Pages).'); return;
   }
 
-  // Encode data as base64 inside a <meta> tag — avoids any </script> parsing issues
+  // Encode data as base64 inside a <meta> tag (safe — no script-tag conflicts)
   const json = JSON.stringify({ data: allData, filters, ts });
   const b64  = btoa(unescape(encodeURIComponent(json)));
   html = html.replace(/<meta name="semaforo-snap"[^>]*>/g, '');
