@@ -2637,19 +2637,19 @@ async function downloadSnapshot() {
   };
   const ts = new Date().toISOString().slice(0,10);
 
-  // Fetch clean HTML source so the snapshot starts from a pristine state
   let html;
   try {
     const res = await fetch(location.href.split('?')[0]);
     html = await res.text();
   } catch(e) {
-    alert('No se pudo obtener el HTML base para el snapshot. Asegúrate de estar en la versión en línea (GitHub Pages).'); return;
+    alert('Usa esta función desde la versión en línea (GitHub Pages).'); return;
   }
 
-  // Remove any previous embedded snapshot, then inject fresh one
-  html = html.replace(/<script id="__semaforo_snap__">[\s\S]*?<\/script>/g, '');
-  const snap = JSON.stringify({ data: allData, filters, ts });
-  html = html.replace('</head>', `<script id="__semaforo_snap__">window.__SEMAFORO_SNAPSHOT__=${snap};<\/script></head>`);
+  // Encode data as base64 inside a <meta> tag — avoids any </script> parsing issues
+  const json = JSON.stringify({ data: allData, filters, ts });
+  const b64  = btoa(unescape(encodeURIComponent(json)));
+  html = html.replace(/<meta name="semaforo-snap"[^>]*>/g, '');
+  html = html.replace('</head>', `<meta name="semaforo-snap" content="${b64}"></head>`);
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
@@ -2794,31 +2794,33 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── SNAPSHOT STARTUP DETECTION ──
-   Runs synchronously: CDN scripts already loaded (blocking in <head>),
-   DOM fully parsed (this script is at end of <body>). No event needed. */
-if (window.__SEMAFORO_SNAPSHOT__) {
+   Reads data from <meta name="semaforo-snap"> (base64-encoded JSON).
+   Runs synchronously at end of body — no event listener needed. */
+(function() {
+  const snapMeta = document.querySelector('meta[name="semaforo-snap"]');
+  if (!snapMeta || !snapMeta.content) return;
   try {
-    const snap = window.__SEMAFORO_SNAPSHOT__;
-    if (snap.data && snap.data.length) {
-      allData = snap.data;
-      applyUtilPlanMode();
-      initDashboard();
-      if (snap.filters) {
-        const f = snap.filters;
-        if (f.dir) document.getElementById('f-dir').value = f.dir;
-        refreshDivisionFilter();
-        if (f.div) document.getElementById('f-div').value = f.div;
-        if (f.sec) document.getElementById('f-sec').value = f.sec;
-        if (f.meses && f.meses.length) {
-          document.querySelectorAll('#f-mes .slicer-btn').forEach(b => {
-            if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
-          });
-        }
+    const snap = JSON.parse(decodeURIComponent(escape(atob(snapMeta.content))));
+    if (!snap.data || !snap.data.length) return;
+    allData = snap.data;
+    applyUtilPlanMode();
+    updateUtilModeBtn();
+    initDashboard();
+    if (snap.filters) {
+      const f = snap.filters;
+      if (f.dir) document.getElementById('f-dir').value = f.dir;
+      refreshDivisionFilter();
+      if (f.div) document.getElementById('f-div').value = f.div;
+      if (f.sec) document.getElementById('f-sec').value = f.sec;
+      if (f.meses && f.meses.length) {
+        document.querySelectorAll('#f-mes .slicer-btn').forEach(b => {
+          if (f.meses.includes(b.dataset.mes)) b.classList.add('active');
+        });
       }
-      onFilter();
     }
+    onFilter();
   } catch(e) { console.error('Snapshot init error:', e); }
-}
+})();
 </script>
 
 <!-- CHATBOT FAB -->
